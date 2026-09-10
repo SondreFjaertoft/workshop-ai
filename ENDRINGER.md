@@ -68,3 +68,8 @@ fra før.
 - `presentasjon/index.html` - statussiden for innsynstjenesten, publisert som artefakt.
   Ligger utenfor `docs/`, så dokumentasjonssjekken plukker den ikke opp.
 - `ENDRINGER.md` - denne filen.
+- `.claude/agents/sandkasse-utvikler.md`, `sandkasse-gransker.md` og
+  `sandkasse-sikkerhet.md` - agentdefinisjoner for arbeidslaget: én som implementerer
+  en sak test først, én som gransker diffen mot reglene i `AGENTS.md`, og én som
+  angriper den. Definisjonene bærer fellene som ikke gir utslag i en test, slik at en
+  agent uten `AGENTS.md` i konteksten likevel kjenner dem.
