@@ -29,6 +29,39 @@ Skriv nyeste øverst. Skriv på norsk, uten tankestrek, slik `AGENTS.md` sier.
 
 ## Endret oppførsel
 
+### AGENTS.md: rettet foreldet leverandørliste, og skrevet ned tre ting som manglet
+
+- **Hva:** Fire tillegg og to rettelser i `AGENTS.md`. Leverandørlisten for
+  `ai-gateway` manglet `telenor-ai-factory`, og env-listen manglet de fire
+  `TELENOR_AI_FACTORY_*`-variablene. I tillegg er `krevSubjekt` skrevet inn som en
+  invariant, sperren `utenIdentifikatorer` er dokumentert, og det er lagt inn en peker
+  til denne filen.
+- **Hvor:** `AGENTS.md`, seksjonene `## Service map`,
+  `## Process-engine behavior to preserve`, `## Integration edges and env vars` og
+  `## Project conventions you must follow`.
+- **Hvorfor:** Leverandøren og variablene fantes i koden og i `docker-compose.yml`,
+  men ikke i dokumentet, og hele KI-delen av det vi bygger hviler på dem.
+
+  De to viktigste tilleggene er likevel de som manglet helt. `krevSubjekt` er en
+  invariant om motorens tilgangskontroll, og den seksjonen finnes nettopp for slike.
+  Og `utenIdentifikatorer` sto ikke nevnt noe sted i `AGENTS.md`, selv om den er
+  porten hvert `/ai/*`-kall går gjennom. Det var villedende ved utelatelse: en agent
+  som bare leste KI-avsnittet, ville enten trodd at ingenting filtreres og bygget sin
+  egen halve sperre, eller trodd at alt filtreres og sendt en hel revisjonsrad inn i
+  konteksten. Sperren er en nektliste på feltnavn og fanger ikke et fødselsnummer
+  under nøkkelen `id`.
+
+  Pekeren til denne filen ligger der fordi `AGENTS.md` leses direkte av Codex, Cursor,
+  Copilot og de andre verktøyene `CLAUDE.md` navngir. De ser verken saksbeskrivelsene
+  eller filene under `.claude/agents/`, så for dem er `AGENTS.md` den eneste kanalen.
+
+  `CLAUDE.md` er ikke rørt, og skal ikke røres: den er en ren import med en kommentar
+  som forklarer hvorfor, og sier selv at instruksjonene ikke skal kopieres inn i den.
+- **Sak:** ingen egen sak. Følger av #4 og av gjennomgangen før agentarbeidet.
+- **Oppstrøms:** delvis. Leverandørlisten og env-variablene er rene rettelser som
+  oppstrøms også trenger. `krevSubjekt`-avsnittet hører sammen med rettelsen i #4.
+  Pekeren til `ENDRINGER.md` er vår egen og hører ikke oppstrøms.
+
 ### Revisjonsloggen binder subjektet, og en eierløs flyt nektes
 
 - **Hva:** `GET /api/revisjonslogg/:sporingsId` nekter nå med 403 når den ikke får

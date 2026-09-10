@@ -75,7 +75,7 @@ chat, or that every service is a søknad.
 - `apps/pasientjournal-mock` (`8087`): mock of an elektronisk pasientjournal, serving the legeerklæringer the TT-kort case is assessed against. **This integration does not exist in reality** - a journal is owned by the virksomhet that provided the care, there is no national API for a legeerklæring, and today the citizen carries a stamped PDF and uploads it. The mock is the structured form of that attachment, and its README says so first. Two things are deliberate: `fnr` is required, so the surface never answers a bulk query, and it is behind Maskinporten rather than ID-porten - real health data sits behind HelseID at Norsk helsenett, which the sandbox does not have. The only *service* that reads `data/legeerklaeringer.json`; the gate reads it too.
 - `apps/brreg-mcp`, `apps/folkeregister-mcp` (no port): **these two are real MCP** - JSON-RPC 2.0 over stdio, newline-delimited, verified against `@modelcontextprotocol/inspector`. They are standalone servers for an external client (Claude Code, Cursor) to spawn; nothing in the sandbox talks to them. In particular `tools-api` does **not** - it reads the same `data/brreg.seed.json` and `data/folkeregister.seed.json` off disk and exposes its own REST equivalents, so the four brreg/folkeregister tools exist twice, in two protocols. Their compose entries only keep the containers alive on an idle stdin; they are not a dependency of anything.
 - `apps/politiattest-mock` (`8088`): mock of a politiattest, serving the attest the vandelskontroll case is assessed against. **This integration does not exist in reality** - there is no API for a politiattest, the attest is a locked PDF with no machine-readable content, it is issued to the citizen rather than to the kommune, and nobody can look it up. The mock is the structured form of the document the citizen presents, and its README says so first. It does not model politiets reaksjonsregister: it answers only for attests already issued for a stated formål. Three things are deliberate: `fnr` is required, so the surface never answers a bulk query; `formaal` is required too, because an attest exists for one purpose and a lookup without one is «what does this person have on them»; and it is behind Maskinporten rather than ID-porten. The only *service* that reads `data/politiattester.json`; the gate reads it too.
-- `apps/ai-gateway` (`8082`): AI provider abstraction (`mock|ollama|openrouter|bedrock`). Switch live, no restart, at `GET /admin` (or `POST /admin/provider`) - persisted to `state/ai-provider-override.json`, which overrides `AI_PROVIDER`/`BEDROCK_MODEL_ID` on next boot. Also exposes `POST /ai/velg-verktoy` for dynamic step-tool discovery.
+- `apps/ai-gateway` (`8082`): AI provider abstraction (`mock|ollama|openrouter|telenor-ai-factory|bedrock`). Switch live, no restart, at `GET /admin` (or `POST /admin/provider`) - persisted to `state/ai-provider-override.json`, which overrides `AI_PROVIDER`/`BEDROCK_MODEL_ID` on next boot. Also exposes `POST /ai/velg-verktoy` for dynamic step-tool discovery.
 - `apps/tools-api` (`8083`): 25 tool endpoints wrapping backend + AI + matrikkel, over REST. Includes `suggest_step_tools`, `matrikkel_finn_veger`, `matrikkel_hent_eiendom`, `matrikkel_hent_eiere`. The catalogue is `GET /verktoy`; a tool is invoked over `POST /verktoy/invoke` or `POST /verktoy/{name}/invoke`.
 - `apps/process-agent` (`8084`): agent API using the tool endpoints. Discovers which tools to call per step via `suggest_step_tools` - but **also carries hardcoded shortcuts** for the `fartsdempende-tiltak` case: step ids `velg-gate`, `hent-gate`, `boliger-bekreft` and `begrunnelse`, plus the tool name `matrikkel_finn_veger`. The dynamic path is real; it is not the only path.
 
@@ -223,6 +223,20 @@ chat, or that every service is a søknad.
   (`apps/sandbox-backend/src/ressurser.ts`), not per route. One catalog entry is
   simultaneously an HTTP endpoint, a valid `DATA_FETCH` target and a valid `SJEKK`
   target. Do not route around this.
+- **A route whose rows exist without a resolvable owner must refuse, not skip the pid
+  binding.** `requireTilgang` (`apps/sandbox-backend/src/autentisering.ts`) takes an
+  opt-in `krevSubjekt` boolean, mirrored on `Rute` (`apps/sandbox-backend/src/routes.ts`);
+  when set and the route's `finnPersonId` returns null, the request refuses instead of
+  the pid binding being skipped. Default is `false` and stays opt-in: on the økt and
+  søknad routes an unresolved subject means there is nothing to answer for, and a
+  blanket refusal there would turn a 404 into an id oracle. Use it only where an
+  unresolved subject means the rows exist and belong to someone.
+  `GET /api/revisjonslogg/:sporingsId` sets it - a flow with no prosessøkt and no
+  søknad used to leave every `KI_KALL` row and every bare-data-read flow open to any
+  authenticated citizen, for any person. A UI that polls a subject-bound route from
+  page load needs a companion guard, the way `stegvis.ts`'s `hentLogg` does.
+  `scripts/test-revisjonsspor.ts` pins the 403 on an unresolvable subject, and that a
+  Maskinporten token is unaffected.
 - **What a non-ok answer from another service means is decided in one place:
   `upstream.ts`.** `callUpstream` raises the failure as ours, `tryUpstream` hands it
   back so a best-effort call can degrade into an advarsel - and no fetch in the
@@ -558,6 +572,10 @@ is the one place prose transliterates, and the file carries a `rem` saying why s
 "fixes" it later.
 
 ## Project conventions you must follow
+- **This fork tracks its own deviations from upstream in `ENDRINGER.md`.** Touch a file
+  that existed before this fork, and log the change there - what, where, why, the issue
+  if any, and whether it is worth upstreaming. `ENDRINGER.md` states the rule and the
+  entry format; this is a pointer, so do not copy the format here.
 - Prefer existing endpoint patterns from current services and examples in `README.md` / `docs/api-oversikt.md`.
 - When API behavior changes, update matching OpenAPI docs in `openapi/*.yaml`.
 - Keep changes scoped to one app unless cross-service change is required.
@@ -693,7 +711,7 @@ pnpm test:bergen-matrikkel
 
 ## Integration edges and env vars
 - In Compose, services call each other by container DNS (`http://sandbox-backend:8080`, etc.).
-- Common env vars: `BACKEND_BASE_URL`, `AI_BASE_URL`, `TOOLS_BASE_URL`, `MATRIKKEL_BASE_URL`, `AI_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `BEDROCK_AWS_REGION`, `BEDROCK_AWS_ACCESS_KEY_ID`, `BEDROCK_AWS_SECRET_ACCESS_KEY`, `BEDROCK_AWS_SESSION_TOKEN`, `BEDROCK_MODEL_ID`, `PASIENTJOURNAL_BASE_URL`, `POLITIATTEST_BASE_URL`, `STATE_DIR` - which
+- Common env vars: `BACKEND_BASE_URL`, `AI_BASE_URL`, `TOOLS_BASE_URL`, `MATRIKKEL_BASE_URL`, `AI_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `BEDROCK_AWS_REGION`, `BEDROCK_AWS_ACCESS_KEY_ID`, `BEDROCK_AWS_SECRET_ACCESS_KEY`, `BEDROCK_AWS_SESSION_TOKEN`, `BEDROCK_MODEL_ID`, `TELENOR_AI_FACTORY_BASE_URL`, `TELENOR_AI_FACTORY_API_KEY`, `TELENOR_AI_FACTORY_MODEL`, `TELENOR_AI_FACTORY_CACHE_SALT`, `PASIENTJOURNAL_BASE_URL`, `POLITIATTEST_BASE_URL`, `STATE_DIR` - which
   `docker-compose.yml` never passes on, so it is read only by scripts you start
   yourself, never by a service under compose.
 - `tools-api` uses `MATRIKKEL_BASE_URL` (default `http://matrikkel-mock:8085`) to reach the Matrikkel mock.
@@ -723,6 +741,19 @@ pnpm test:bergen-matrikkel
   questions, which are answered from `PERSONVERN` in that module. An invented privacy
   claim has no tell a code check can find - no number, no decision - so it gets a fixed
   answer instead.
+- **Every `/ai/*` call that takes a `kontekst` is run through `utenIdentifikatorer`
+  (`apps/ai-gateway/src/sporsmaalsperrer.ts`) before the model sees it** - one gate in
+  `apps/ai-gateway/src/server.ts`, in front of `/ai/dialogforslag`, `/ai/oppsummering`,
+  `/ai/forklar-databruk`, `/ai/klarsprak` and `/ai/risikosjekk`, so no call site can
+  forget it. **It is a denylist keyed on field names**
+  (`identifikator`, `fnr`, `syntetiskFodselsnummer`, `personId`, `pid`), and its own
+  comment calls it a floor, not a ceiling. It does not catch an identifier nested under
+  a different key: a revisjonslogg row carries a fødselsnummer under `aktor.id`, and
+  personIds under `gjaldt` and `omfatter`, and none of those keys are in the set. A
+  caller that spreads a row into `kontekst` and trusts this gate to clean it writes an
+  identifier into `state/ai-trace.jsonl` and out to the provider. Build the context from
+  an allowlist at the call site instead - resource label, purpose, verdict, not the row.
+  Do not add `id` to the denylist: it is a generic key `/ai/oppsummering` needs.
 - **Changing a prompt? Run the evals.** `pnpm test:eval` scores the AI layer against
   datasets in `evals/`, with a pass threshold per dataset and a non-zero exit below it.
   `evals/ai-policy.json` is the executable form of `ai-no-decisions`: the model phrases,

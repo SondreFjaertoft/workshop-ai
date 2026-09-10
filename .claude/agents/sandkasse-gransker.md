@@ -31,6 +31,8 @@ Se diffen med `git diff main...HEAD` eller `git diff --cached`.
 
 **7. Dato og tidssone.** Ny bruk av `new Date()` med lokale gettere er en feil som er usynlig i UTC og biter i norsk tid.
 
+**7b. Hva som sendes til modellen.** Sperren foran `/ai/*` er en nektliste på feltnavn og fanger ikke et fødselsnummer under nøkkelen `id`, personId-er under `gjaldt` eller `omfatter`, eller et navn. Ble konteksten bygget fra en tillatelsesliste, eller ble et objekt sendt videre i sin helhet? Det siste er et funn, for prompten lagres ordrett i `state/ai-trace.jsonl`.
+
 **8. Språk.** Tankestrek noe sted. `-a`-endelser i norsk prosa. Engelsk der prosaen skal være norsk, eller omvendt. Krøllete anførselstegn i prosa.
 
 **9. Ble endringen ført opp i `ENDRINGER.md`** hvis en fil som fantes fra før ble rørt?

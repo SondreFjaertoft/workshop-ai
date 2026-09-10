@@ -25,6 +25,7 @@ Du implementerer **én** sak i denne sandkassen, ferdig, test først. Du får sa
 - **Enhver skriving til en delt fil under `state/` går gjennom `updateJson`.** Aldri en egen lese-endre-skrive.
 - **En regel mer enn én kaller trenger, hører i `apps/shared/`,** og `apps/shared` importerer ingenting fra en app.
 - **Datoregning gjøres på ISO-strengen**, aldri `new Date()` med lokale gettere. Bruk hjelperne i `apps/shared/alder.ts`.
+- **Sperren foran modellen er en nektliste på feltnavn, ikke et tak.** `utenIdentifikatorer` fjerner `identifikator`, `fnr`, `syntetiskFodselsnummer`, `personId` og `pid`. Den fanger *ikke* et fødselsnummer som ligger under nøkkelen `id`, og heller ikke personId-er under `gjaldt` eller `omfatter`, eller et navn. Sender du et helt objekt til et `/ai/*`-endepunkt og stoler på sperren, havner identifikatoren i `state/ai-trace.jsonl` og ut til leverandøren. Bygg konteksten fra en tillatelsesliste på kallstedet. Legg ikke `id` inn i nektlisten.
 - **Ingen tankestrek**, heller ikke i commit-meldinger. Norsk prosa tar `-en`, ikke `-a`.
 
 ## Kommandoer
