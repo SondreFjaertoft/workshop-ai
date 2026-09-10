@@ -427,6 +427,13 @@ krevEl("start").onclick = startProsess;
 forrigeKnapp.onclick = () => moveSteg(-1);
 nesteKnapp.onclick = () => moveSteg(1);
 krevEl("hentLogg").onclick = async () => {
+  // sporingsId starter som en tidsstempel-id, og knappen er levende fra sidelast.
+  // Ruten binder nå subjektet, så en flyt uten prosessøkt svarer 403 der den før
+  // svarte med en tom liste. Samme vakt som moveSteg har, av samme grunn.
+  if (!aktivProsessoekt) {
+    setStatus("Start en prosess først - revisjonsloggen henger på sporingsId-en til en økt.");
+    return;
+  }
   try {
     const data = await getJson<unknown>(`http://localhost:8080/api/revisjonslogg/${sporingsId}`);
     visning.textContent = JSON.stringify(data, null, 2);

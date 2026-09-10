@@ -220,10 +220,25 @@ export function requireTilgang(valg: {
    * Computed by handleevne.ts, never guessed here.
    */
   representantPider?: string[];
+  /**
+   * When true, a `pid` this route could not resolve refuses instead of skipping
+   * the binding below.
+   *
+   * `pid` is null for two reasons that cannot be told apart here: the route has no
+   * single subject and the handler narrows the answer itself, or the lookup simply
+   * failed. Only the route knows which, because only the route knows whether "no
+   * subject" also means "no data". For a prosessøkt it does - an unknown oektsId
+   * answers 404 and nothing leaks. For the revisjonslogg it does not: the rows are
+   * there, they are about someone, and «vi kan ikke avgjøre hvem» must never read
+   * as «så hvem som helst kan få dem».
+   *
+   * Opt-in, so the routes whose 404 would otherwise become a 403 are untouched.
+   */
+  krevSubjekt?: boolean;
   /** Named in the error message, so a 403 says what was refused. */
   hva: string;
 }): void {
-  const { kaller, tilgang, scope, pid, representantPider = [], hva } = valg;
+  const { kaller, tilgang, scope, pid, representantPider = [], krevSubjekt = false, hva } = valg;
 
   if (tilgang === "aapen") return;
   // The escape hatch. Off by default; it exists so the whole test tail can be
@@ -250,6 +265,17 @@ export function requireTilgang(valg: {
     throw manglerHjemmel(
       `${hva} går på tvers av personer, og et personlig ID-porten-token gir ikke ` +
       `hjemmel til det. Dette krever en maskinklient med scope ${scope}.`
+    );
+  }
+
+  // A subject this route says it needs, and could not resolve. Refusing is the only
+  // safe reading: the rows exist and belong to someone. The message deliberately does
+  // not say *why* the binding failed - the wrong-pid 403 below carries the same
+  // `grunn`, and keeping the two indistinguishable denies an existence oracle on
+  // personId and on sporingsId alike.
+  if (!pid && krevSubjekt) {
+    throw manglerHjemmel(
+      `Du har bare tilgang til dine egne data, og ${hva} kunne ikke bindes til deg.`
     );
   }
 

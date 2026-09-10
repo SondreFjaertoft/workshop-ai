@@ -166,6 +166,88 @@ function loggRader(rader: any[], handling: string, ressurs?: string) {
   return rader.filter((rad) => rad.handling === handling && (!ressurs || rad.ressurs === ressurs));
 }
 
+// --- 1b. en flyt uten subjekt er ikke åpen for hvem som helst ---------------
+
+/*
+ * `finnPersonId` for /api/revisjonslogg/:sporingsId slår opp eieren av flyten i
+ * prosessøktene og deretter i søknadene. Finner den ingen, ble `pid` null - og en
+ * null pid hoppet over pid-bindingen i sin helhet, så radene lå åpne for enhver
+ * innlogget innbygger. Alle KI-rader og hver flyt som ble til av et rent datakall
+ * havner i den bøtten, og de bærer fødselsnummer og husstandssammensetning.
+ *
+ * En generell «null pid nekter» ville vært feil: for øktene og søknadene betyr et
+ * uoppslåelig subjekt at svaret er tomt, og et 403 der ville fortalt en kaller
+ * hvilke økt-id-er som finnes. Derfor er `krevSubjekt` en rute-egenskap, og bare
+ * denne ruten setter den.
+ */
+async function flytUtenSubjektErIkkeAapen(fnr: string, token: string) {
+  const sporingsId = "idor-proeve";
+  const lest = await kall(
+    backendUrl,
+    `/api/personer/person-001/husstand?sporingsId=${sporingsId}`,
+    token
+  );
+  check("oppsettet leser person-001 sin husstand", lest.status === 200, `status ${lest.status}`);
+
+  /*
+   * Ruten nekter nå for alle når flyten er eierløs, også for den radene faktisk
+   * handler om. Det er med vilje, og det er en funksjonstap framfor et sikkerhetstap:
+   *
+   * Alternativet var å utlede eieren fra radene selv når verken prosessøkt eller
+   * søknad kjenner flyten. Det kan vi ikke gjøre, for `sporingsId` kommer fra
+   * klienten: da kunne en angriper hengt én egen rad på et offers flyt, blitt
+   * medeier av den, og fått resten av radene med på veien. Det ville gjort en
+   * lavalvorlig svakhet til en rettighetseskalering.
+   *
+   * Innbyggeren skal lese sine egne rader gjennom den subjektbundne ruten
+   * /api/personer/:personId/revisjonslogg, der personen står i stien og bindingen
+   * derfor holder. Denne ruten svarer på «hele denne flyten», og en flyt ingen eier
+   * er ikke din å lese.
+   */
+  const egen = await kall(backendUrl, `/api/revisjonslogg/${sporingsId}`, token);
+  check(
+    "eierløs flyt nektes også for den radene handler om",
+    egen.status === 403,
+    `status ${egen.status}, ${JSON.stringify(egen.kropp).slice(0, 120)}`
+  );
+
+  // Flyten har verken prosessøkt eller søknad, så finnPersonId svarer null.
+  const annenToken = await innbyggerAuth("person-031");
+  const fremmed = await kall(backendUrl, `/api/revisjonslogg/${sporingsId}`, annenToken);
+  check(
+    "en annen innbygger nektes en flyt uten subjekt",
+    fremmed.status === 403,
+    `status ${fremmed.status}, ${JSON.stringify(fremmed.kropp).slice(0, 160)}`
+  );
+  check(
+    "avslaget er mangler_hjemmel",
+    fremmed.kropp?.grunn === "mangler_hjemmel",
+    JSON.stringify(fremmed.kropp?.grunn)
+  );
+  check(
+    "avslaget lekker ikke person-001 sitt fødselsnummer",
+    !JSON.stringify(fremmed.kropp).includes(fnr),
+    JSON.stringify(fremmed.kropp).slice(0, 160)
+  );
+
+  const ukjent = await kall(backendUrl, "/api/revisjonslogg/flyt-finnes-ikke", annenToken);
+  check(
+    "en ukjent sporingsId nektes framfor å svare tom liste",
+    ukjent.status === 403,
+    `status ${ukjent.status}`
+  );
+
+  // Maskinklienten er upåvirket: sjekken ligger etter system-returen, og en
+  // maskin kan lese hele loggen på GET /api/revisjonslogg uansett.
+  const maskin = await maskinAuth("ks:innbyggerdialog:les");
+  const somMaskin = await kall(backendUrl, `/api/revisjonslogg/${sporingsId}`, maskin);
+  check(
+    "maskinklient med scope er upåvirket av krevSubjekt",
+    somMaskin.status === 200,
+    `status ${somMaskin.status}`
+  );
+}
+
 // --- 2. direkte sjekk med gyldig samtykke -----------------------------------
 
 async function direkteRegelsjekk(fnr: string, token: string) {
@@ -1031,6 +1113,7 @@ async function run() {
     check("testpersonen har syntetisk fødselsnummer", Boolean(fnr));
 
     await direkteEierforhold(fnr, token);
+    await flytUtenSubjektErIkkeAapen(fnr, token);
     await direkteRegelsjekk(fnr, token);
     await motorFartsdemping(token);
     await trukketSamtykkeTommerOekten(stateDir);
