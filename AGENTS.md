@@ -572,6 +572,11 @@ is the one place prose transliterates, and the file carries a `rem` saying why s
 "fixes" it later.
 
 ## Project conventions you must follow
+- **Agents work as a team here, and `.claude/arbeidslaget.md` says how.** Read it before
+  dispatching one: it carries how the implement-review-attack cycle is sequenced, when
+  the security pass is warranted, which kinds of task the team is the wrong tool for,
+  and which questions are settled and should not be reopened. The three roles are
+  defined in `.claude/agents/`.
 - **This fork tracks its own deviations from upstream in `ENDRINGER.md`.** Touch a file
   that existed before this fork, and log the change there - what, where, why, the issue
   if any, and whether it is worth upstreaming. `ENDRINGER.md` states the rule and the
