@@ -107,7 +107,12 @@ function containsPhrase(ord: string[], uttrykk: string): boolean {
  * is why the carve-out below checks the grounding text.
  */
 
-const BESLUTNINGSMONSTRE = [
+/*
+ * Exported so a test can walk every entry rather than spot-checking two of them.
+ * Thirteen of these had no coverage at all, and a pattern nobody exercises is a
+ * guard that can stop firing in silence.
+ */
+export const BESLUTNINGSMONSTRE = [
   "du har rett til",
   "du har ikke rett til",
   "du far innvilget",
@@ -174,9 +179,14 @@ function findDecisionLanguage(tekst: string, grunnlagstekst: string): string[] {
   const grunnlagOrd = foldNorwegian(normalizeText(grunnlagstekst));
 
   return BESLUTNINGSMONSTRE.filter((monster) => {
-    if (!containsPhrase(ord, monster)) return false;
+    // Folded like the input is, the way UTFORTMONSTRE and INJEKSJONSMONSTRE already
+    // do it. This list was the one place the pattern went in raw, so an entry written
+    // with æ/ø/å would never have matched folded input - and "correcting" the spelling
+    // of an existing entry would have stopped it firing with nothing turning red.
+    const foldet = foldNorwegian(monster);
+    if (!containsPhrase(ord, foldet)) return false;
     // Quoting an outcome the backend already reached is allowed.
-    return !grunnlagOrd.includes(monster);
+    return !grunnlagOrd.includes(foldet);
   });
 }
 

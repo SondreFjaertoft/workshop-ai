@@ -29,6 +29,30 @@ Skriv nyeste øverst. Skriv på norsk, uten tankestrek, slik `AGENTS.md` sier.
 
 ## Endret oppførsel
 
+### Beslutningssperren foldes, og hele listen er dekket av test
+
+- **Hva:** Mønstrene i `BESLUTNINGSMONSTRE` foldes nå på samme måte som inndataene,
+  listen er eksportert, og testen går gjennom hver enkelt oppføring i begge stavemåter.
+  Antallet mønstre er pinnet.
+- **Hvor:** `apps/ai-gateway/src/sporsmaalsperrer.ts` (`findDecisionLanguage`, og
+  eksporten av listen), `scripts/test-sporsmaalsperrer.ts`.
+- **Hvorfor:** To feil i samme mekanisme, funnet ved å prøve.
+
+  `UTFORTMONSTRE` og `INJEKSJONSMONSTRE` foldet mønsteret sitt før sammenligningen.
+  `BESLUTNINGSMONSTRE` gjorde det ikke: inndataene ble foldet, mønsteret gikk inn rått.
+  Dermed ville en oppføring skrevet med æ/ø/å aldri truffet, og en «retting» av
+  stavemåten på en oppføring som fantes, ville stoppet sperren i stillhet. Foldingen
+  er en ren utvidelse: alle oppføringene er alt skrevet uten disse bokstavene, så
+  endringen gjør ingenting i dag, men fjerner fellen.
+
+  Og av femten mønstre var bare to dekket av en test. Vi prøvde å «rette»
+  `vilkarene` til `vilkårene`, og hele suiten ble grønn. Nå kjøres hver oppføring,
+  i begge stavemåter. En sletting fanges av at antallet er pinnet: løkken alene ville
+  bare gitt én runde mindre og ingen rød sjekk.
+- **Sak:** ingen egen sak. Funnet under gjennomgangen før agentarbeidet.
+- **Oppstrøms:** ja. Både asymmetrien i foldingen og den manglende dekningen gjelder
+  oppstrøms uendret, og sperren er den samme alle lagene bygger på.
+
 ### AGENTS.md: rettet foreldet leverandørliste, og skrevet ned tre ting som manglet
 
 - **Hva:** Fire tillegg og to rettelser i `AGENTS.md`. Leverandørlisten for

@@ -9,6 +9,7 @@
 
 import { readFile } from "node:fs/promises";
 import {
+  BESLUTNINGSMONSTRE,
   buildGrunnlagsIndeks,
   buildPersonvernSvar,
   buildTryggSvar,
@@ -117,6 +118,57 @@ check(
   "en nøytral forklaring slipper gjennom",
   validateAnswer("Vi bruker skatteopplysningene til å regne ut hva du skal betale.", kontekst).ok
 );
+
+/* ── Hele beslutningslisten, i begge stavemåter ───────────────────────────────
+ *
+ * Sjekkene over dekket to av mønstrene. De tretten andre hadde ingen i det hele
+ * tatt, og et mønster ingen kjører er en sperre som kan slutte å virke i
+ * stillhet: en «retting» av stavemåten i listen ga fortsatt grønn suite.
+ *
+ * Derfor går denne gjennom hver oppføring, og gjør det i begge stavemåter.
+ * Mønstrene er skrevet uten æ/ø/å fordi det er slik folk skriver, og både
+ * inndata og mønster foldes nå, så begge former skal fanges. Faller én av dem
+ * ut, er det denne sjekken som sier fra.
+ */
+
+function medNorskeBokstaver(tekst: string): string {
+  return tekst
+    .replace(/\bfar\b/g, "får")
+    .replace(/avslar/g, "avslår")
+    .replace(/avslatt/g, "avslått")
+    .replace(/vilkarene/g, "vilkårene")
+    .replace(/soknaden/g, "søknaden");
+}
+
+/*
+ * Antallet er pinnet, ikke bare «større enn null». Løkken under går gjennom listen,
+ * så en oppføring som forsvinner blir én runde mindre og ingen rød sjekk. Legger du
+ * til et mønster med vitende og vilje, hever du tallet her i samme endring.
+ */
+check(
+  "beslutningslisten har akkurat de mønstrene vi tror",
+  BESLUTNINGSMONSTRE.length === 15,
+  `${BESLUTNINGSMONSTRE.length} mønstre, ventet 15`
+);
+
+for (const monster of BESLUTNINGSMONSTRE) {
+  const utfall = validateAnswer(`${monster} nå.`, { tjeneste: "Test" });
+  check(
+    `beslutningsmønsteret «${monster}» fanges`,
+    utfall.sperre === "beslutning",
+    JSON.stringify(utfall)
+  );
+
+  const medBokstaver = medNorskeBokstaver(monster);
+  if (medBokstaver !== monster) {
+    const utfallMedBokstaver = validateAnswer(`${medBokstaver} nå.`, { tjeneste: "Test" });
+    check(
+      `«${medBokstaver}» fanges også med norske bokstaver`,
+      utfallMedBokstaver.sperre === "beslutning",
+      JSON.stringify(utfallMedBokstaver)
+    );
+  }
+}
 
 /* ── Fødselsnummer og promptlekkasje ──────────────────────────────────────── */
 
