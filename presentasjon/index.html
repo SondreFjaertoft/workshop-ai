@@ -289,7 +289,7 @@
     <p class="undertittel">Et kart over hvem som har lest opplysningene dine, hva de fikk se, og hvilke rettigheter du faktisk har til dem.</p>
     <div class="toppstatus">
       <span>Status <b>Fase 1 av 3, under arbeid</b></span>
-      <span>Sikkerhetsfunn <b>7 registrert, 1 på demo-veien</b></span>
+      <span>Sikkerhetsfunn <b>7 registrert, 1 rettet</b></span>
       <span>Oppdatert <b>10. september 2026</b></span>
     </div>
   </header>
@@ -428,12 +428,12 @@
             <td><span class="ja">Ja</span></td>
             <td><span class="ja">Ja</span></td>
             <td><span class="nei">Nei</span></td>
-            <td><span class="nei">Nei</span><span class="vilkaar">med vilje, art. 5(2)</span></td>
+            <td><span class="nei">Nei</span><span class="vilkaar">art. 17(3)(b), og med vilje</span></td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="liten dempet">Den siste raden er poenget. Å slette sporet av hvem som har sett på deg, ville fjernet nettopp det som beskytter deg. Derfor kan loggen leses og kopieres, men aldri tømmes, og tjenesten sier det rett ut framfor å tilby en knapp som ser ut som en rettighet.</p>
+    <p class="liten dempet">Den siste raden er poenget. Å slette sporet av hvem som har sett på deg, ville fjernet nettopp det som beskytter deg. Hjemmelen for å nekte er den samme artikkel 17(3)(b) som gjelder rett over, altså at behandlingen er pålagt; ansvarlighetsprinsippet i artikkel 5(2) er grunnen til at loggen finnes, men det er ikke i seg selv et unntak fra sletteretten. Loggen kan altså leses og kopieres, men aldri tømmes, og tjenesten sier det rett ut framfor å tilby en knapp som ser ut som en rettighet.</p>
   </section>
 
   <section>
@@ -464,11 +464,12 @@
           <span class="funnid">F1</span>
           <span class="alvor alvor-hoy">Høy</span>
           <span class="sted">routes.ts:752 · autentisering.ts:262</span>
-          <span class="status">Notert · ikke prioritert</span>
+          <span class="status status-fikset">Fikset · test rød først</span>
         </div>
         <h3>Manglende tilgangskontroll på revisjonsloggen</h3>
         <p>Finner ikke ruten et subjekt for en flyt-id, blir <code>pid</code> null, og eierskapssjekken hoppes over i sin helhet. Alle KI-rader og hver flyt som ble opprettet av et rent datakall, kan dermed leses av hvilken som helst innlogget innbygger, om hvilken som helst person. Radene bærer fødselsnummer, husstandssammensetning og hva som ble lest om hvem. Ruten har ingen test i dag, og kommentaren over den beskriver oppførselen som en funksjon, så ingen som leser diffen ville stoppet den.</p>
         <p class="dempet liten">Hvorfor det haster: dette er konfidensialitetsgrensen hele sandkassen finnes for å demonstrere, og den er brutt i den ene flaten som skal bevise at datatilgang er kontrollert.</p>
+        <p class="dempet liten"><strong>Rettet.</strong> Sjekken ble skrevet rød først og feilet med status 200 der den nå krever 403. Ruten binder subjektet gjennom en ny egenskap per rute, ikke gjennom en ny hovedregel: en generell «null pid nekter» ville gjort hvert 404 på økt- og søknadsrutene til et 403, og dermed avslørt hvilke økt-id-er som finnes. Ruten nekter nå også for den radene handler om, når flyten er eierløs. Å utlede eieren fra radene var alternativet, men flyt-id-en kommer fra klienten, så en angriper kunne hengt én egen rad på et offers flyt og blitt medeier. Da hadde F6 blitt en rettighetseskalering.</p>
       </article>
 
       <article class="funn">
