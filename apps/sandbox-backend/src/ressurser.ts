@@ -39,7 +39,7 @@ import {
   getHusstandForPerson,
   getPlasserForTjeneste
 } from "./state.ts";
-import type { Kildetype } from "../../shared/kildetype.ts";
+import type { Kildetype } from "./kildetype.ts";
 
 // SHARED RESOURCE CATALOG
 //
@@ -149,7 +149,12 @@ export type Ressurs = {
    * if the request cannot be resolved, the strictest requirement stands.
    */
   kreverSamtykkeFor?: (kontekst: RessursContext) => Datakilde | null;
-  /** Purpose written to the revisjonslogg alongside the consent basis. */
+  /**
+   * The catalogue's purpose label for this resource. It is a fallback value,
+   * not what the revisjonslogg records: when the read is gated by a samtykke
+   * that carries its own formaal, runRessurs() logs that one instead - see
+   * `samtykke?.formaal || ressurs.formaal` there.
+   */
   formaal?: string;
   /**
    * Hvilken etat eller leverandør som faktisk har opplysningen, f.eks.
@@ -159,12 +164,15 @@ export type Ressurs = {
    */
   kilde?: string;
   /**
-   * Kodeverk i apps/shared/kildetype.ts. "regel" er forbeholdt en
-   * regelvurdering (en SJEKK-oppføring) og betyr at det ikke finnes noen
-   * dataeier å oppgi - kartet tegner den som en beslutningsnode, ikke en
-   * kilde. scripts/valider-data.ts sjekker dette skillet ved kjøretid, siden
-   * en union over et objekt i koden er like erasert som en union over data
-   * fra en fil.
+   * Kodeverk i kildetype.ts. "regel" er forbeholdt en regelvurdering (en
+   * SJEKK-oppføring) og betyr at det ikke finnes noen dataeier å oppgi -
+   * kartet tegner den som en beslutningsnode, ikke en kilde.
+   * "framvist-dokument" er et dokument innbyggeren selv framviser til
+   * kommunen (en politiattest, en legeerklæring), uten at kommunen kan slå
+   * det opp noe sted - se apps/politiattest-mock/README.md og
+   * apps/pasientjournal-mock/README.md. scripts/valider-data.ts sjekker
+   * dette skillet ved kjøretid, siden en union over et objekt i koden er
+   * like erasert som en union over data fra en fil.
    */
   kildetype: Kildetype;
   /**
@@ -262,9 +270,9 @@ export const ressurser: Ressurs[] = [
     kilde: "Skatteetaten",
     kildetype: "statlig-register",
     oppbevaring:
-      "Ingen kopi av skattegrunnlaget. Kommunen henter et ferskt oppslag mot " +
-      "Skatteetaten via Fiks for hver beregning, og lagrer bare resultatet av " +
-      "beregningen i søknaden.",
+      "Kommunen henter et ferskt oppslag mot Skatteetaten via Fiks for hver " +
+      "beregning, men lagrer svaret i prosessøkten, søknadsdokumentet og " +
+      "KI-sporet for denne søknaden.",
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getInntektForPerson(tilstand, personId))
   },
@@ -281,10 +289,14 @@ export const ressurser: Ressurs[] = [
     samtykkeEmne: "Helseopplysningene",
     formaal: "Vurdere rett til TT-kort",
     kilde: "Behandlende lege",
-    kildetype: "leverandoer",
+    kildetype: "framvist-dokument",
+    // Ikke søknadsdokumentet: dataFetchLinjeForSteg tar bare felt på øverste nivå
+    // som er tekst eller tall, og dette svaret er et nøstet objekt. Dokumentet får
+    // derfor ingen linje herfra, bare oppsummeringen modellen skriver.
     oppbevaring:
-      "Kommunen lagrer legeerklæringen i prosessøkten og søknadsdokumentet for " +
-      "denne søknaden, ikke i pasientjournalen selv.",
+      "Kommunen lagrer legeerklæringen i prosessøkten og i KI-sporet for denne " +
+      "søknaden, ikke i pasientjournalen selv. Søknadsdokumentet får ingen egen " +
+      "linje herfra, bare oppsummeringen.",
     handter: async ({ tilstand, personId }) => {
       const erklaering = await finnGjeldendeLegeerklaering(
         tilstand,
@@ -353,8 +365,9 @@ export const ressurser: Ressurs[] = [
     kilde: "Kontakt- og reservasjonsregisteret (KRR)",
     kildetype: "statlig-register",
     oppbevaring:
-      "Ingen kopi. Kommunen gjør et levende oppslag mot kontaktregisteret for " +
-      "hver forespørsel og lagrer ikke svaret.",
+      "Kommunen gjør et levende oppslag mot kontaktregisteret for hver " +
+      "forespørsel, men lagrer svaret i prosessøkten, søknadsdokumentet og " +
+      "KI-sporet for denne søknaden.",
     handter: async ({ tilstand, personId }) => {
       const person = findPerson(tilstand, personId);
       if (!person) {
@@ -401,10 +414,15 @@ export const ressurser: Ressurs[] = [
     formaal: "Vurdere rett til dialogrelatert tjeneste",
     kilde: "Skatteetaten",
     kildetype: "statlig-register",
+    // Denne ruten er ikke et DATA_FETCH-mål i noen prosessdefinisjon, så motoren
+    // lagrer ingenting herfra. Person-ruten over er det, og der er svaret det
+    // motsatte. To ruter mot samme opplysning med to ulike slettesvar, og det er
+    // nettopp derfor feltet må hentes per rute og ikke per opplysning.
     oppbevaring:
-      "Ingen kopi av skattegrunnlaget. Kommunen henter et ferskt oppslag mot " +
-      "Skatteetaten via Fiks for hver beregning, og lagrer bare resultatet av " +
-      "beregningen i søknaden.",
+      "Ingen kopi fra denne ruten. Den er ikke et steg i noen prosess, så motoren " +
+      "lagrer ikke svaret. Samme opplysning hentet over " +
+      "/api/personer/{personId}/inntekt blir liggende i prosessøkten, " +
+      "søknadsdokumentet og KI-sporet.",
     finnPersonId: ({ tilstand, parametere }) => {
       const husstand = tilstand.husstander.find((h: any) => h.husstandId === parametere.husstandId);
       const soeker = husstand?.medlemmer.find((m: any) => m.rolle === "foresatt");
@@ -425,7 +443,9 @@ export const ressurser: Ressurs[] = [
     tilgang: "aapen",
     kilde: "Kartverket",
     kildetype: "statlig-register",
-    oppbevaring: "Ingen kopi. Kommunen slår opp mot matrikkelen for hver forespørsel.",
+    oppbevaring:
+      "Kommunen slår opp mot matrikkelen for hver forespørsel, men lagrer " +
+      "svaret i prosessøkten, søknadsdokumentet og KI-sporet for denne søknaden.",
     handter: async ({ sok }) => {
       const gateParam = sok.get("gate");
       if (!gateParam) {
@@ -466,6 +486,14 @@ export const ressurser: Ressurs[] = [
     ressurs: "matrikkel-eierforhold",
     beskrivelse: "SJEKK: eier søkeren en eiendom i den oppgitte gaten?",
     kildetype: "regel",
+    // En regelvurdering er ingen datainnehaver, men utfallet blir liggende: det
+    // lagres i prosessøkten, gjengis ordrett i søknadsdokumentet og går til
+    // modellen. Grunnlaget bærer i tillegg beløpet eller utfallet vurderingen
+    // bygget på, så raden er ikke tom for opplysninger om personen.
+    oppbevaring:
+      "Ingen opplysning hentes utenfra, men vurderingen lagres i prosessøkten, " +
+      "gjengis i søknadsdokumentet og går til KI-sporet. Grunnlaget bærer " +
+      "beløpet eller utfallet den bygget på.",
     handter: async ({ sok, personId, steg }) => {
       const gateNavn = sok.get("gate") || "";
       const gateData = await findGate(gateNavn);
@@ -495,7 +523,12 @@ export const ressurser: Ressurs[] = [
     // holdings, not the open street register.
     kilde: "Kartverket",
     kildetype: "statlig-register",
-    oppbevaring: "Ingen kopi. Kommunen slår opp mot matrikkelen og grunnboken for hver forespørsel.",
+    // Ruten er ikke et prosessteg, men chat-flaten legger eiendommene i konteksten
+    // til et fritekstspørsmål, og da lagres adressen ordrett i KI-sporet.
+    oppbevaring:
+      "Kommunen slår opp mot matrikkelen og grunnboken for hver forespørsel og " +
+      "lagrer ikke svaret selv. Stiller du et fritt spørsmål i chatten, følger " +
+      "eiendommene med som grunnlag, og da havner adressen i KI-sporet.",
     valider: ({ personId }) => {
       if (!personId) {
         throw new HttpError("personId er påkrevd.", 400);
@@ -565,10 +598,16 @@ export const ressurser: Ressurs[] = [
     samtykkeEmne: "Politiattesten",
     formaal: "Kontrollere vandel for oppdrag eller stilling",
     kilde: "Politiet",
-    kildetype: "statlig-register",
+    kildetype: "framvist-dokument",
+    // GET /api/vandel/formaal bruker de samme to feltnavnene om et annet spørsmål:
+    // der er kilde hjemmelen kontrollen gjøres etter, og oppbevaring gjelder selve
+    // originalattesten. Teksten under peker dit framfor å svare på det spørsmålet
+    // en gang til.
     oppbevaring:
-      "Kommunen lagrer bare den minimerte vurderingen (type, dato, antall " +
-      "anmerkninger) i søknaden, aldri hva anmerkningene gjelder.",
+      "Kommunen lagrer bare den minimerte vurderingen - type, dato og antall " +
+      "anmerkninger - i prosessøkten og i KI-sporet, aldri hva anmerkningene " +
+      "gjelder. Søknadsdokumentet får ingen egen linje herfra. Selve attesten " +
+      "beholdes ikke; makuleringsregelen står i GET /api/vandel/formaal.",
     valider: ({ sok }) => {
       const formaal = sok.get("formaal");
       if (!formaal) {
@@ -607,6 +646,14 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "politiattest",
     formaal: "Kontrollere vandel for oppdrag eller stilling",
     kildetype: "regel",
+    // En regelvurdering er ingen datainnehaver, men utfallet blir liggende: det
+    // lagres i prosessøkten, gjengis ordrett i søknadsdokumentet og går til
+    // modellen. Grunnlaget bærer i tillegg beløpet eller utfallet vurderingen
+    // bygget på, så raden er ikke tom for opplysninger om personen.
+    oppbevaring:
+      "Ingen opplysning hentes utenfra, men vurderingen lagres i prosessøkten, " +
+      "gjengis i søknadsdokumentet og går til KI-sporet. Grunnlaget bærer " +
+      "beløpet eller utfallet den bygget på.",
     valider: ({ sok, personId }) => {
       if (!personId || !sok.get("rolle")) {
         throw new HttpError("personId og rolle er påkrevd.", 400);
@@ -630,6 +677,14 @@ export const ressurser: Ressurs[] = [
     kreverSamtykkeFor: samtykkeForOrdningssjekk,
     formaal: "Vurdere rett til dialogrelatert tjeneste",
     kildetype: "regel",
+    // En regelvurdering er ingen datainnehaver, men utfallet blir liggende: det
+    // lagres i prosessøkten, gjengis ordrett i søknadsdokumentet og går til
+    // modellen. Grunnlaget bærer i tillegg beløpet eller utfallet vurderingen
+    // bygget på, så raden er ikke tom for opplysninger om personen.
+    oppbevaring:
+      "Ingen opplysning hentes utenfra, men vurderingen lagres i prosessøkten, " +
+      "gjengis i søknadsdokumentet og går til KI-sporet. Grunnlaget bærer " +
+      "beløpet eller utfallet den bygget på.",
     valider: ({ sok, personId }) => {
       if (!personId || (!sok.get("ordning") && !sok.get("tjeneste"))) {
         throw new HttpError("personId og enten ordning eller tjeneste er påkrevd.", 400);
@@ -658,6 +713,14 @@ export const ressurser: Ressurs[] = [
     kreverSamtykkeFor: samtykkeForOrdningssjekk,
     formaal: "Vurdere rett til dialogrelatert tjeneste",
     kildetype: "regel",
+    // En regelvurdering er ingen datainnehaver, men utfallet blir liggende: det
+    // lagres i prosessøkten, gjengis ordrett i søknadsdokumentet og går til
+    // modellen. Grunnlaget bærer i tillegg beløpet eller utfallet vurderingen
+    // bygget på, så raden er ikke tom for opplysninger om personen.
+    oppbevaring:
+      "Ingen opplysning hentes utenfra, men vurderingen lagres i prosessøkten, " +
+      "gjengis i søknadsdokumentet og går til KI-sporet. Grunnlaget bærer " +
+      "beløpet eller utfallet den bygget på.",
     valider: ({ sok, personId }) => {
       if (!personId || (!sok.get("ordning") && !sok.get("tjeneste"))) {
         throw new HttpError("personId og enten ordning eller tjeneste er påkrevd.", 400);

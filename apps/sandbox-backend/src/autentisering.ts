@@ -172,7 +172,13 @@ export function aktorFor(kaller: Caller, personId?: string | null): Record<strin
  *   "bred"       Crosses people, so no citizen token can justify it. Machine with
  *                the scope only. The full revisjonslogg is the example.
  */
-export type Tilgang = "aapen" | "egne-data" | "bred";
+// An exported array, not just the union below, so a check against real data can
+// validate a Tilgang value at runtime - a union over a literal object is erased
+// at runtime just like a union over data from a file. scripts/valider-data.ts
+// uses it for Ressurs.tilgang in the ressurskatalog, the same way KILDETYPER
+// covers Ressurs.kildetype.
+export const TILGANGER = ["aapen", "egne-data", "bred"] as const;
+export type Tilgang = (typeof TILGANGER)[number];
 
 /** Default scope for a machine caller. Reading person data on someone's behalf. */
 export const SCOPE_LES = "ks:innbyggerdialog:les";

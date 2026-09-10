@@ -1801,10 +1801,13 @@ components:
             som ikke har noen dataeier.
         kildetype:
           type: string
-          enum: [kommune, statlig-register, leverandoer, regel]
+          enum: [kommune, statlig-register, leverandoer, regel, framvist-dokument]
           description: >
-            Kodeverk i apps/shared/kildetype.ts. "regel" betyr at oppføringen er
-            en regelvurdering (en SJEKK-oppføring), ikke en dataeier.
+            Kodeverk i apps/sandbox-backend/src/kildetype.ts. "regel" betyr at
+            oppføringen er en regelvurdering (en SJEKK-oppføring), ikke en
+            dataeier. "framvist-dokument" er et dokument innbyggeren selv
+            framviser til kommunen, uten at kommunen kan slå det opp noe sted -
+            en politiattest eller en legeerklæring.
         oppbevaring:
           type: string
           nullable: true
@@ -1814,7 +1817,11 @@ components:
         formaal:
           type: string
           nullable: true
-          description: Formålet som skrives til revisjonsloggen sammen med samtykkegrunnlaget.
+          description: >
+            Formålet katalogen oppgir for denne ressursen. Det er en
+            reserveverdi: krever lesningen samtykke og samtykket bærer sitt
+            eget formål, er det formålet som skrives til revisjonsloggen, ikke
+            dette.
         syntetisk:
           type: boolean
     Feil:

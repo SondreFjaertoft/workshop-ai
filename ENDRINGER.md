@@ -34,20 +34,36 @@ Skriv nyeste øverst. Skriv på norsk, uten tankestrek, slik `AGENTS.md` sier.
 - **Hva:** `GET /api/katalog/ressurser` svarer nå med fire nye felt per oppføring:
   `kilde`, `kildetype`, `oppbevaring` og `formaal` (sistnevnte fantes alt på
   `Ressurs`-typen, bare aldri lagt på svaret). `kildetype` er kodeverket
-  `kommune | statlig-register | leverandoer | regel`, og hver SJEKK-oppføring får
-  `regel` og ingen oppdiktet kilde. `tilgang` og `syntetisk`, som spesifikasjonen
-  ikke dokumenterte, er også lagt inn.
+  `kommune | statlig-register | leverandoer | regel | framvist-dokument`, og hver
+  SJEKK-oppføring får `regel` og ingen oppdiktet kilde. `tilgang` og `syntetisk`,
+  som spesifikasjonen ikke dokumenterte, er også lagt inn, og `tilgang` er nå et
+  kodeverk (`TILGANGER` i `autentisering.ts`) og ikke bare en type.
+  Etter gjennomgang: fem `oppbevaring`-tekster som feilaktig påsto ingen kopi
+  (`inntekt`, `/api/husstander/{husstandId}/inntektsgrunnlag`, `kontaktinfo`, `matrikkel-gate`) eller utelot
+  KI-sporet (`legeerklaering`) er rettet, `politiattest` fikk den nye kildetypen
+  `framvist-dokument` sammen med `legeerklaering` i stedet for en oppdiktet
+  registeroppføring, SJEKK-kontrollen i `valider-data.ts` nøkler nå på et
+  SJEKK-stegs `api.url` i prosessdefinisjonene i stedet for på `beskrivelse`, og
+  spesifikasjonens beskrivelse av `formaal` er rettet til å si at det er en
+  reserveverdi, ikke det revisjonsloggen faktisk skriver når et samtykke har sitt
+  eget formål.
 - **Hvor:** `apps/sandbox-backend/src/ressurser.ts` (`Ressurs`-typen, hver
   oppføring i `ressurser`, og `ressurskatalog()`), ny fil
-  `apps/shared/kildetype.ts` (`KILDETYPER`/`Kildetype`), `scripts/valider-data.ts`
-  (ny sjekk mot kodeverket og mot skillet SJEKK/regel), `scripts/sjekk-openapi-
-  dekning.ts` (ny `datakodeverk`-oppføring for `KatalogRessurs.kildetype`),
-  `openapi/sandbox-backend.yaml` (nytt skjema `KatalogRessurs`).
+  `apps/sandbox-backend/src/kildetype.ts` (`KILDETYPER`/`Kildetype`, flyttet fra
+  `apps/shared` fordi leserkretsen er den samme som `vilkaar.ts` har),
+  `apps/sandbox-backend/src/autentisering.ts` (`TILGANGER`), `scripts/valider-data.ts`
+  (sjekk mot kodeverkene, og skillet SJEKK/regel nøklet på `api.url`),
+  `scripts/sjekk-openapi-dekning.ts` (ny `datakodeverk`-oppføring for
+  `KatalogRessurs.kildetype`), `openapi/sandbox-backend.yaml` (nytt skjema
+  `KatalogRessurs`, rettet `formaal`-beskrivelse, ny `kildetype`-verdi).
 - **Hvorfor:** Katalogen svarte sju nøkler, og ingen sa hvem som faktisk eier
   eller oppbevarer opplysningen - den virkelige kilden sto bare som prosa i
   `beskrivelse`. Innsynstjenesten trenger et strukturert svar på hvilken etat
   eller leverandør som har opplysningen, og skillet mellom kilde og kopi
-  (`oppbevaring`) er det som avgjør om noe kan slettes.
+  (`oppbevaring`) er det som avgjør om noe kan slettes. Gjennomgangen fant at
+  flere av disse svarene selv var feil - en påstand om oppbevaring er ikke sann
+  fordi den er plausibel, den må spores gjennom `resultaterRaa`, søknadsdokumentet
+  og KI-sporet.
 - **Sak:** #3.
 - **Oppstrøms:** ja. Manglende struktur og udokumenterte felt gjelder
   referanseimplementasjonen uendret, og et innsynskart ethvert lag bygger over
@@ -73,6 +89,20 @@ Skriv nyeste øverst. Skriv på norsk, uten tankestrek, slik `AGENTS.md` sier.
   `vilkarene` til `vilkårene`, og hele suiten ble grønn. Nå kjøres hver oppføring,
   i begge stavemåter. En sletting fanges av at antallet er pinnet: løkken alene ville
   bare gitt én runde mindre og ingen rød sjekk.
+
+  Runde tre, rettet for hånd: fem av tekstene var fortsatt gale. Legeerklæringen og
+  politiattesten påstod søknadsdokumentet, men `dataFetchLinjeForSteg` tar bare felt
+  på øverste nivå som er tekst eller tall, og begge svarene er nøstede objekter, så
+  dokumentet får ingen linje derfra. Husstandsruten for inntekt fikk samme tekst som
+  personruten, men er ikke et `DATA_FETCH`-mål i noen prosess, så motoren lagrer
+  ingenting derfra. `matrikkel-mine-eiendommer` sa «ingen kopi», men chat-flaten
+  legger eiendommene i konteksten til et fritt spørsmål, og da havner adressen i
+  KI-sporet. Og de fire `regel`-oppføringene sa ingenting, mens et SJEKK-utfall
+  lagres i økten, gjengis i dokumentet og går til modellen.
+
+  Klassen er ikke lukket av dette. Sak #18 innfører sjekken som gjør påstandene
+  selvkontrollerende, og den er grunnen til at feltet ikke skal rettes for hånd en
+  fjerde gang.
 - **Sak:** ingen egen sak. Funnet under gjennomgangen før agentarbeidet.
 - **Oppstrøms:** ja. Både asymmetrien i foldingen og den manglende dekningen gjelder
   oppstrøms uendret, og sperren er den samme alle lagene bygger på.

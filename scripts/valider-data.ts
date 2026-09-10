@@ -43,7 +43,8 @@ import {
 } from "../apps/shared/politiattest.ts";
 import { LOVTITLER, bortkomneSitater, finnLovnavn, sitatspenn } from "../apps/shared/hjemmel.ts";
 import type { Politiattest } from "../apps/shared/politiattest.ts";
-import { KILDETYPER } from "../apps/shared/kildetype.ts";
+import { KILDETYPER } from "../apps/sandbox-backend/src/kildetype.ts";
+import { TILGANGER } from "../apps/sandbox-backend/src/autentisering.ts";
 import { ressurser } from "../apps/sandbox-backend/src/ressurser.ts";
 
 // Only seed data. Runtime datasets live in state/, are gitignored, and are
@@ -2100,14 +2101,28 @@ for (const barn of majasBarn) {
 // fra en fil - samme grunn som scripts/test-kodeverk.ts finnes. Dette er den
 // kjøretidssjekken, på samme sted som resten av kodeverkene i denne filen.
 //
-// SJEKK-oppføringene kjennes på beskrivelsen, som er den eksisterende
-// konvensjonen i katalogen: hver av dem begynner med "SJEKK:". En slik
-// oppføring er en regelvurdering og ingen dataeier, så den skal ha
+// SJEKK-oppføringene kjennes på at et SJEKK-steg i data/prosessdefinisjoner.json
+// faktisk kaller stien, ikke på beskrivelsen. beskrivelse er prosa som
+// språkarbeid får skrive om, mens api.url og sti er frosne identifikatorer -
+// en tidligere versjon nøklet på at beskrivelse begynte med "SJEKK:", og en
+// omskrevet beskrivelse slapp en oppdiktet kilde gjennom uten at noe ble rødt.
+// En slik oppføring er en regelvurdering og ingen dataeier, så den skal ha
 // kildetype "regel" og ingen oppdiktet kilde - og omvendt: "regel" skal ikke
 // stå på en oppføring som faktisk har en dataeier.
+const sjekkStier = new Set<string>();
+for (const prosess of allProsesser) {
+  for (const steg of prosess.steg || []) {
+    if (steg.type !== "SJEKK") continue;
+    const url = steg.api?.url;
+    if (url) sjekkStier.add(url.split("?")[0]!);
+  }
+}
 for (const ressurs of ressurser) {
-  krevKodeverk(ressurs.ressurs, "kildetype", ressurs.kildetype, KILDETYPER);
-  const erSjekk = ressurs.beskrivelse.startsWith("SJEKK:");
+  krevKodeverk(`${ressurs.ressurs} (${ressurs.sti})`, "kildetype", ressurs.kildetype, KILDETYPER);
+  // tilgang er en union i koden (autentisering.ts), like erasert ved kjøretid
+  // som kildetype - samme kjøretidssjekk, på det nydokumenterte feltet.
+  krevKodeverk(`${ressurs.ressurs} (${ressurs.sti})`, "tilgang", ressurs.tilgang || "egne-data", TILGANGER);
+  const erSjekk = sjekkStier.has(ressurs.sti);
   if (erSjekk && ressurs.kildetype !== "regel") {
     throw new Error(
       `${ressurs.ressurs} (${ressurs.sti}) er en SJEKK-oppføring og skal ha ` +

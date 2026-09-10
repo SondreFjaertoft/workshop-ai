@@ -428,7 +428,15 @@ const tjenester: Tjeneste[] = [
         // likevel stå riktig i spesifikasjonen.
         skjema: "KatalogRessurs",
         felt: "kildetype",
-        verdier: async () => (await import("../apps/shared/kildetype.ts")).KILDETYPER
+        verdier: async () => (await import("../apps/sandbox-backend/src/kildetype.ts")).KILDETYPER
+      },
+      {
+        // TILGANGER ble eksportert nettopp for å kunne måles her. Uten denne
+        // oppføringen var enumet dokumentert og ustøttet, som er samme erasering
+        // kildetype ble koblet opp for å unngå.
+        skjema: "KatalogRessurs",
+        felt: "tilgang",
+        verdier: async () => (await import("../apps/sandbox-backend/src/autentisering.ts")).TILGANGER
       }
     ]
   },
