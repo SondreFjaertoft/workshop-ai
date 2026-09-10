@@ -117,6 +117,17 @@ type Rute = {
    * Runs after readState(), so it can look the subject up.
    */
   finnPersonId?: (kontekst: Omit<Kontekst, "kaller">) => string | null | Promise<string | null>;
+  /**
+   * Set this when a subject the route could not resolve must refuse rather than
+   * skip the pid binding. See the krevSubjekt docs in autentisering.ts.
+   *
+   * Default false, and that is deliberate even though this file otherwise fails
+   * closed: making it true by default would turn every 404 on the økt and søknad
+   * routes into a 403, and reintroduce exactly the id oracle the comment at the
+   * requireTilgang call site exists to prevent. It is opt-in because only a route
+   * whose rows exist without a resolvable owner needs it.
+   */
+  krevSubjekt?: boolean;
   handter: (kontekst: Kontekst) => Promise<void> | void;
 };
 
@@ -754,7 +765,15 @@ const ruter: Rute[] = [
     sti: "/api/revisjonslogg/:sporingsId",
     // One sporingsId is one flow. A citizen may read their own - that is the
     // transparency surface demo-gui renders - so the subject is whoever the flow
-    // was about. A flow with no person in it is open to any authenticated caller.
+    // was about.
+    //
+    // A flow with no prosessøkt and no søknad leaves pid null, and that used to skip
+    // the pid binding entirely: every KI_KALL row and every flow minted by a bare
+    // data read was readable by any authenticated citizen, for any person, and those
+    // rows carry fødselsnummer and husstandssammensetning. krevSubjekt closes it.
+    // The rows are here and they are about someone, so «vi vet ikke hvem» has to
+    // refuse rather than hand them over.
+    krevSubjekt: true,
     finnPersonId: ({ parametere, tilstand }) =>
       tilstand.prosessoekter.find((session: any) => session.sporingsId === parametere.sporingsId)?.personId
       ?? tilstand.soknader.find((s: any) => s.sporingsId === parametere.sporingsId)?.personId
@@ -842,6 +861,7 @@ export async function handleRequest(request: IncomingMessage, response: ServerRe
           representantPider: personId
             ? representantPider(tilstand, personId, tilstand.satser.gjelderFra)
             : [],
+          krevSubjekt: treff.rute.krevSubjekt ?? false,
           hva: `${treff.rute.metode} ${treff.rute.sti}`
         });
       } catch (feil) {
