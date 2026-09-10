@@ -29,6 +29,30 @@ Skriv nyeste øverst. Skriv på norsk, uten tankestrek, slik `AGENTS.md` sier.
 
 ## Endret oppførsel
 
+### Ressurskatalogen får kilde, kildetype og oppbevaring, og `tilgang`/`syntetisk` blir dokumentert
+
+- **Hva:** `GET /api/katalog/ressurser` svarer nå med fire nye felt per oppføring:
+  `kilde`, `kildetype`, `oppbevaring` og `formaal` (sistnevnte fantes alt på
+  `Ressurs`-typen, bare aldri lagt på svaret). `kildetype` er kodeverket
+  `kommune | statlig-register | leverandoer | regel`, og hver SJEKK-oppføring får
+  `regel` og ingen oppdiktet kilde. `tilgang` og `syntetisk`, som spesifikasjonen
+  ikke dokumenterte, er også lagt inn.
+- **Hvor:** `apps/sandbox-backend/src/ressurser.ts` (`Ressurs`-typen, hver
+  oppføring i `ressurser`, og `ressurskatalog()`), ny fil
+  `apps/shared/kildetype.ts` (`KILDETYPER`/`Kildetype`), `scripts/valider-data.ts`
+  (ny sjekk mot kodeverket og mot skillet SJEKK/regel), `scripts/sjekk-openapi-
+  dekning.ts` (ny `datakodeverk`-oppføring for `KatalogRessurs.kildetype`),
+  `openapi/sandbox-backend.yaml` (nytt skjema `KatalogRessurs`).
+- **Hvorfor:** Katalogen svarte sju nøkler, og ingen sa hvem som faktisk eier
+  eller oppbevarer opplysningen - den virkelige kilden sto bare som prosa i
+  `beskrivelse`. Innsynstjenesten trenger et strukturert svar på hvilken etat
+  eller leverandør som har opplysningen, og skillet mellom kilde og kopi
+  (`oppbevaring`) er det som avgjør om noe kan slettes.
+- **Sak:** #3.
+- **Oppstrøms:** ja. Manglende struktur og udokumenterte felt gjelder
+  referanseimplementasjonen uendret, og et innsynskart ethvert lag bygger over
+  den trenger de samme fire feltene.
+
 ### Beslutningssperren foldes, og hele listen er dekket av test
 
 - **Hva:** Mønstrene i `BESLUTNINGSMONSTRE` foldes nå på samme måte som inndataene,

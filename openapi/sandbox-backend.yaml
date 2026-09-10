@@ -797,24 +797,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  required: [metode, sti, ressurs]
-                  properties:
-                    metode:
-                      type: string
-                      example: GET
-                    sti:
-                      type: string
-                      example: /api/personer/:personId/inntekt
-                    ressurs:
-                      type: string
-                      description: Navnet ressursen får i revisjonsloggen.
-                    beskrivelse:
-                      type: string
-                    kreverSamtykke:
-                      type: string
-                      nullable: true
-                      description: Datakilde det må foreligge samtykke for, eller null.
+                  $ref: "#/components/schemas/KatalogRessurs"
 
   /api/matrikkel/gater:
     get:
@@ -1781,6 +1764,59 @@ components:
           description: >
             Opplysningene og den ordningsspesifikke kilden bak utfallet. Feltene
             varierer med regeltypen.
+    KatalogRessurs:
+      type: object
+      description: >
+        Én oppføring i ressurskatalogen (apps/sandbox-backend/src/ressurser.ts).
+        kilde, kildetype og oppbevaring svarer på hvem som faktisk eier
+        opplysningen og om kommunen har en egen kopi - to forskjellige fakta,
+        der det andre avgjør om noe kan slettes.
+      required: [metode, sti, ressurs, tilgang, kildetype, syntetisk]
+      properties:
+        metode:
+          type: string
+          example: GET
+        sti:
+          type: string
+          example: /api/personer/:personId/inntekt
+        ressurs:
+          type: string
+          description: Navnet ressursen får i revisjonsloggen.
+        beskrivelse:
+          type: string
+        tilgang:
+          type: string
+          enum: [aapen, egne-data, bred]
+          description: Autorisasjonsbåndet ressursen krever. Se autentisering.ts.
+        kreverSamtykke:
+          type: string
+          nullable: true
+          description: Datakilde det må foreligge samtykke for, eller null.
+        kilde:
+          type: string
+          nullable: true
+          description: >
+            Etaten eller leverandøren som faktisk har opplysningen, f.eks.
+            "Skatteetaten" eller "Folkeregisteret". null for en regelvurdering,
+            som ikke har noen dataeier.
+        kildetype:
+          type: string
+          enum: [kommune, statlig-register, leverandoer, regel]
+          description: >
+            Kodeverk i apps/shared/kildetype.ts. "regel" betyr at oppføringen er
+            en regelvurdering (en SJEKK-oppføring), ikke en dataeier.
+        oppbevaring:
+          type: string
+          nullable: true
+          description: >
+            Om kommunen selv oppbevarer en kopi av opplysningen, og på hvilket
+            grunnlag. null der det ikke er en meningsfull kopi å oppgi.
+        formaal:
+          type: string
+          nullable: true
+          description: Formålet som skrives til revisjonsloggen sammen med samtykkegrunnlaget.
+        syntetisk:
+          type: boolean
     Feil:
       type: object
       description: >

@@ -43,6 +43,8 @@ import {
 } from "../apps/shared/politiattest.ts";
 import { LOVTITLER, bortkomneSitater, finnLovnavn, sitatspenn } from "../apps/shared/hjemmel.ts";
 import type { Politiattest } from "../apps/shared/politiattest.ts";
+import { KILDETYPER } from "../apps/shared/kildetype.ts";
+import { ressurser } from "../apps/sandbox-backend/src/ressurser.ts";
 
 // Only seed data. Runtime datasets live in state/, are gitignored, and are
 // created by the services on first write.
@@ -2087,6 +2089,41 @@ for (const barn of majasBarn) {
       (notLoaded.length ? `I katalogen, men ikke lastet: ${notLoaded.join(", ")}. ` : "") +
       `Katalogen er det et team oppdager datagrunnlaget gjennom - den skal si det ` +
       `samme som lasteren.`
+    );
+  }
+}
+
+// --- Ressurskatalogen: kildetype er et kodeverk, ikke bare en type -----------
+//
+// Ressurs.kildetype er unionen (typeof KILDETYPER)[number], og en union over et
+// litterært objekt i koden er like erasert ved kjøretid som en union over data
+// fra en fil - samme grunn som scripts/test-kodeverk.ts finnes. Dette er den
+// kjøretidssjekken, på samme sted som resten av kodeverkene i denne filen.
+//
+// SJEKK-oppføringene kjennes på beskrivelsen, som er den eksisterende
+// konvensjonen i katalogen: hver av dem begynner med "SJEKK:". En slik
+// oppføring er en regelvurdering og ingen dataeier, så den skal ha
+// kildetype "regel" og ingen oppdiktet kilde - og omvendt: "regel" skal ikke
+// stå på en oppføring som faktisk har en dataeier.
+for (const ressurs of ressurser) {
+  krevKodeverk(ressurs.ressurs, "kildetype", ressurs.kildetype, KILDETYPER);
+  const erSjekk = ressurs.beskrivelse.startsWith("SJEKK:");
+  if (erSjekk && ressurs.kildetype !== "regel") {
+    throw new Error(
+      `${ressurs.ressurs} (${ressurs.sti}) er en SJEKK-oppføring og skal ha ` +
+      `kildetype "regel", ikke "${ressurs.kildetype}".`
+    );
+  }
+  if (erSjekk && ressurs.kilde) {
+    throw new Error(
+      `${ressurs.ressurs} (${ressurs.sti}) er en SJEKK-oppføring og skal ikke ha ` +
+      `en oppdiktet kilde. Fant kilde "${ressurs.kilde}".`
+    );
+  }
+  if (!erSjekk && ressurs.kildetype === "regel") {
+    throw new Error(
+      `${ressurs.ressurs} (${ressurs.sti}) har kildetype "regel", men er ikke en ` +
+      `SJEKK-oppføring. "regel" er forbeholdt regelvurderinger uten dataeier.`
     );
   }
 }

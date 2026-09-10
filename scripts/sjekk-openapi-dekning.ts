@@ -420,6 +420,15 @@ const tjenester: Tjeneste[] = [
           (await lesData("husstander.json")).flatMap((h: any) =>
             h.medlemmer.map((m: any) => m.rolle)
           )
+      },
+      {
+        // Målt mot unionen i koden, ikke mot verdiene ressurskatalogen tilfeldigvis
+        // bruker i dag - samme grunn som legeerklaeringens to kodeverk under
+        // pasientjournal-mock. En kildetype ingen oppføring bruker enda skal
+        // likevel stå riktig i spesifikasjonen.
+        skjema: "KatalogRessurs",
+        felt: "kildetype",
+        verdier: async () => (await import("../apps/shared/kildetype.ts")).KILDETYPER
       }
     ]
   },

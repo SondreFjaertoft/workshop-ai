@@ -39,6 +39,7 @@ import {
   getHusstandForPerson,
   getPlasserForTjeneste
 } from "./state.ts";
+import type { Kildetype } from "../../shared/kildetype.ts";
 
 // SHARED RESOURCE CATALOG
 //
@@ -151,6 +152,30 @@ export type Ressurs = {
   /** Purpose written to the revisjonslogg alongside the consent basis. */
   formaal?: string;
   /**
+   * Hvilken etat eller leverandør som faktisk har opplysningen, f.eks.
+   * "Skatteetaten" eller "Folkeregisteret". Utelates for en SJEKK-oppføring:
+   * den er en regelvurdering, ikke en dataeier, og skal ikke få en oppdiktet
+   * kilde. Se kildetype.
+   */
+  kilde?: string;
+  /**
+   * Kodeverk i apps/shared/kildetype.ts. "regel" er forbeholdt en
+   * regelvurdering (en SJEKK-oppføring) og betyr at det ikke finnes noen
+   * dataeier å oppgi - kartet tegner den som en beslutningsnode, ikke en
+   * kilde. scripts/valider-data.ts sjekker dette skillet ved kjøretid, siden
+   * en union over et objekt i koden er like erasert som en union over data
+   * fra en fil.
+   */
+  kildetype: Kildetype;
+  /**
+   * Om kommunen selv oppbevarer en kopi av opplysningen, og på hvilket
+   * grunnlag. Skillet mellom kilde og kopi er poenget med feltet: "kilden har
+   * opplysningen" og "kommunen har nå en kopi" er to forskjellige fakta, og
+   * det andre avgjør om noe kan slettes. Utelates der det ikke er en
+   * meningsfull kopi å oppgi, som for en SJEKK-oppføring.
+   */
+  oppbevaring?: string;
+  /**
    * Subject noun in the two consent refusals («… krever registrert samtykke» /
    * «… krever et nytt samtykke»). Omitted means the original fallback wording,
    * which is byte-frozen for the resources that predate this field.
@@ -200,6 +225,9 @@ export const ressurser: Ressurs[] = [
     sti: "/api/personer/:personId",
     ressurs: "person",
     beskrivelse: "Folkeregisterliknende grunndata om én person.",
+    kilde: "Folkeregisteret",
+    kildetype: "statlig-register",
+    oppbevaring: "Kommunen har en egen kopi, synkronisert fra Folkeregisteret.",
     handter: ({ tilstand, personId }) => {
       const person = findPerson(tilstand, personId);
       if (!person) {
@@ -213,6 +241,9 @@ export const ressurser: Ressurs[] = [
     sti: "/api/personer/:personId/husstand",
     ressurs: "husstand",
     beskrivelse: "Husstanden personen tilhører, med roller for foresatte og barn.",
+    kilde: "Folkeregisteret",
+    kildetype: "statlig-register",
+    oppbevaring: "Kommunen har en kopi, avledet av folkeregisteropplysningene om husstanden.",
     omfatter: allIHusstand,
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getHusstandForPerson(tilstand, personId))
@@ -228,6 +259,12 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "inntekt",
     samtykkeEmne: "Inntektsdata",
     formaal: "Vurdere rett til dialogrelatert tjeneste",
+    kilde: "Skatteetaten",
+    kildetype: "statlig-register",
+    oppbevaring:
+      "Ingen kopi av skattegrunnlaget. Kommunen henter et ferskt oppslag mot " +
+      "Skatteetaten via Fiks for hver beregning, og lagrer bare resultatet av " +
+      "beregningen i søknaden.",
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getInntektForPerson(tilstand, personId))
   },
@@ -243,6 +280,11 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "helseopplysninger",
     samtykkeEmne: "Helseopplysningene",
     formaal: "Vurdere rett til TT-kort",
+    kilde: "Behandlende lege",
+    kildetype: "leverandoer",
+    oppbevaring:
+      "Kommunen lagrer legeerklæringen i prosessøkten og søknadsdokumentet for " +
+      "denne søknaden, ikke i pasientjournalen selv.",
     handter: async ({ tilstand, personId }) => {
       const erklaering = await finnGjeldendeLegeerklaering(
         tilstand,
@@ -260,6 +302,9 @@ export const ressurser: Ressurs[] = [
     sti: "/api/personer/:personId/barnehage",
     ressurs: "barnehageplass",
     beskrivelse: "Barnehageplasser registrert på barna i husstanden.",
+    kilde: "Kommunens barnehageopptak",
+    kildetype: "kommune",
+    oppbevaring: "Kommunen er selv kilden. Det finnes ingen kopi et annet sted.",
     omfatter: (kontekst) => barnMedPlass(kontekst, "barnehage"),
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getPlasserForTjeneste(tilstand, personId, "barnehage"))
@@ -269,6 +314,9 @@ export const ressurser: Ressurs[] = [
     sti: "/api/personer/:personId/sfo",
     ressurs: "sfoplass",
     beskrivelse: "SFO-plasser registrert på barna i husstanden.",
+    kilde: "Kommunens SFO-opptak",
+    kildetype: "kommune",
+    oppbevaring: "Kommunen er selv kilden. Det finnes ingen kopi et annet sted.",
     omfatter: (kontekst) => barnMedPlass(kontekst, "sfo"),
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getPlasserForTjeneste(tilstand, personId, "sfo"))
@@ -280,6 +328,9 @@ export const ressurser: Ressurs[] = [
     beskrivelse: "Fritidsaktiviteter barna i husstanden deltar i.",
     omfatter: (kontekst) => barnMedPlass(kontekst, "fritid"),
     formaal: "Vise fritidsaktiviteter i husstanden",
+    kilde: "Kommunens fritidstilbud",
+    kildetype: "kommune",
+    oppbevaring: "Kommunen er selv kilden. Det finnes ingen kopi et annet sted.",
     handter: ({ tilstand, personId }) =>
       withStatus(404, () => getPlasserForTjeneste(tilstand, personId, "fritid"))
   },
@@ -299,6 +350,11 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "kontaktinfo",
     samtykkeEmne: "Kontaktopplysningene",
     formaal: "Velge varslings- og forsendelseskanal",
+    kilde: "Kontakt- og reservasjonsregisteret (KRR)",
+    kildetype: "statlig-register",
+    oppbevaring:
+      "Ingen kopi. Kommunen gjør et levende oppslag mot kontaktregisteret for " +
+      "hver forespørsel og lagrer ikke svaret.",
     handter: async ({ tilstand, personId }) => {
       const person = findPerson(tilstand, personId);
       if (!person) {
@@ -343,6 +399,12 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "inntekt",
     samtykkeEmne: "Inntektsdata",
     formaal: "Vurdere rett til dialogrelatert tjeneste",
+    kilde: "Skatteetaten",
+    kildetype: "statlig-register",
+    oppbevaring:
+      "Ingen kopi av skattegrunnlaget. Kommunen henter et ferskt oppslag mot " +
+      "Skatteetaten via Fiks for hver beregning, og lagrer bare resultatet av " +
+      "beregningen i søknaden.",
     finnPersonId: ({ tilstand, parametere }) => {
       const husstand = tilstand.husstander.find((h: any) => h.husstandId === parametere.husstandId);
       const soeker = husstand?.medlemmer.find((m: any) => m.rolle === "foresatt");
@@ -361,6 +423,9 @@ export const ressurser: Ressurs[] = [
     // The street register is public and has no person subject - there is no one
     // whose data this is. That is why its revisjonslogg rows say aktor: ukjent.
     tilgang: "aapen",
+    kilde: "Kartverket",
+    kildetype: "statlig-register",
+    oppbevaring: "Ingen kopi. Kommunen slår opp mot matrikkelen for hver forespørsel.",
     handter: async ({ sok }) => {
       const gateParam = sok.get("gate");
       if (!gateParam) {
@@ -400,6 +465,7 @@ export const ressurser: Ressurs[] = [
     sti: "/api/matrikkel/sjekk/eierforhold",
     ressurs: "matrikkel-eierforhold",
     beskrivelse: "SJEKK: eier søkeren en eiendom i den oppgitte gaten?",
+    kildetype: "regel",
     handter: async ({ sok, personId, steg }) => {
       const gateNavn = sok.get("gate") || "";
       const gateData = await findGate(gateNavn);
@@ -427,6 +493,9 @@ export const ressurser: Ressurs[] = [
     beskrivelse: "Eiendommer i matrikkelen der søkeren er registrert som eier, på tvers av alle gater.",
     // No tilgang here means "egne-data", which is what this is: the applicant's own
     // holdings, not the open street register.
+    kilde: "Kartverket",
+    kildetype: "statlig-register",
+    oppbevaring: "Ingen kopi. Kommunen slår opp mot matrikkelen og grunnboken for hver forespørsel.",
     valider: ({ personId }) => {
       if (!personId) {
         throw new HttpError("personId er påkrevd.", 400);
@@ -458,6 +527,9 @@ export const ressurser: Ressurs[] = [
     // sier hva som gjelder for rollen, ikke noe om den som søker. Derfor åpen, og
     // derfor ingen samtykkeport - det er ingenting her å samtykke til.
     tilgang: "aapen",
+    kilde: "Kommunen",
+    kildetype: "kommune",
+    oppbevaring: "Bekreftelsen er kommunens eget dokument. Det finnes ingen kopi et annet sted.",
     valider: ({ sok }) => {
       if (!sok.get("rolle")) {
         throw new HttpError("rolle er påkrevd. Se GET /api/regler/satser for gyldige.", 400);
@@ -492,6 +564,11 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "politiattest",
     samtykkeEmne: "Politiattesten",
     formaal: "Kontrollere vandel for oppdrag eller stilling",
+    kilde: "Politiet",
+    kildetype: "statlig-register",
+    oppbevaring:
+      "Kommunen lagrer bare den minimerte vurderingen (type, dato, antall " +
+      "anmerkninger) i søknaden, aldri hva anmerkningene gjelder.",
     valider: ({ sok }) => {
       const formaal = sok.get("formaal");
       if (!formaal) {
@@ -529,6 +606,7 @@ export const ressurser: Ressurs[] = [
     // med ett mulig utfall er bare en vei rundt den som står her.
     kreverSamtykke: "politiattest",
     formaal: "Kontrollere vandel for oppdrag eller stilling",
+    kildetype: "regel",
     valider: ({ sok, personId }) => {
       if (!personId || !sok.get("rolle")) {
         throw new HttpError("personId og rolle er påkrevd.", 400);
@@ -551,6 +629,7 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "inntekt",
     kreverSamtykkeFor: samtykkeForOrdningssjekk,
     formaal: "Vurdere rett til dialogrelatert tjeneste",
+    kildetype: "regel",
     valider: ({ sok, personId }) => {
       if (!personId || (!sok.get("ordning") && !sok.get("tjeneste"))) {
         throw new HttpError("personId og enten ordning eller tjeneste er påkrevd.", 400);
@@ -578,6 +657,7 @@ export const ressurser: Ressurs[] = [
     kreverSamtykke: "inntekt",
     kreverSamtykkeFor: samtykkeForOrdningssjekk,
     formaal: "Vurdere rett til dialogrelatert tjeneste",
+    kildetype: "regel",
     valider: ({ sok, personId }) => {
       if (!personId || (!sok.get("ordning") && !sok.get("tjeneste"))) {
         throw new HttpError("personId og enten ordning eller tjeneste er påkrevd.", 400);
@@ -624,6 +704,10 @@ export function ressurskatalog() {
     beskrivelse: ressurs.beskrivelse,
     tilgang: ressurs.tilgang || "egne-data",
     kreverSamtykke: ressurs.kreverSamtykke || null,
+    kilde: ressurs.kilde || null,
+    kildetype: ressurs.kildetype,
+    oppbevaring: ressurs.oppbevaring || null,
+    formaal: ressurs.formaal || null,
     syntetisk: true
   }));
 }
