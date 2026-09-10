@@ -1,0 +1,593 @@
+<title>Innbyggerens datakart</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --grunn: #f7f8fb;
+    --flate: #ffffff;
+    --flate-dempet: #eef1f7;
+    --blekk: #101728;
+    --blekk-dempet: #5a6478;
+    --kant: #dde2ec;
+    --kant-svak: #e9edf4;
+    --aksent: #1459c7;
+    --aksent-svak: #e7eefb;
+    --hoy: #b4342a;
+    --middels: #8a5a06;
+    --fikset: #1c7a4d;
+
+    --skrift-ui: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --skrift-prosa: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --skrift-kode: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --grunn: #0c1220;
+      --flate: #141c2e;
+      --flate-dempet: #1b2438;
+      --blekk: #e6eaf2;
+      --blekk-dempet: #93a0b8;
+      --kant: #26314a;
+      --kant-svak: #1e2739;
+      --aksent: #7ba7f0;
+      --aksent-svak: #1a2540;
+      --hoy: #f08379;
+      --middels: #e0a63b;
+      --fikset: #5dbe8c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --grunn: #0c1220;
+    --flate: #141c2e;
+    --flate-dempet: #1b2438;
+    --blekk: #e6eaf2;
+    --blekk-dempet: #93a0b8;
+    --kant: #26314a;
+    --kant-svak: #1e2739;
+    --aksent: #7ba7f0;
+    --aksent-svak: #1a2540;
+    --hoy: #f08379;
+    --middels: #e0a63b;
+    --fikset: #5dbe8c;
+  }
+
+  body {
+    background: var(--grunn);
+    color: var(--blekk);
+    font-family: var(--skrift-prosa);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .side {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4.5rem;
+  }
+
+  /* --- topp --- */
+
+  .topp { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .merke {
+    font-family: var(--skrift-kode);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blekk-dempet);
+  }
+
+  h1 {
+    font-family: var(--skrift-ui);
+    font-weight: 700;
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .undertittel {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--blekk-dempet);
+    max-width: 34em;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  .toppstatus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--kant);
+    font-family: var(--skrift-kode);
+    font-size: 0.8125rem;
+    color: var(--blekk-dempet);
+  }
+  .toppstatus b { color: var(--blekk); font-weight: 500; }
+
+  /* --- seksjoner --- */
+
+  section { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .stikk {
+    font-family: var(--skrift-ui);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--aksent);
+    margin: 0;
+  }
+
+  h2 {
+    font-family: var(--skrift-ui);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 3.2vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h3 {
+    font-family: var(--skrift-ui);
+    font-weight: 600;
+    font-size: 1.0625rem;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  p { margin: 0; max-width: 65ch; text-wrap: pretty; }
+
+  .dempet { color: var(--blekk-dempet); }
+  .liten { font-size: 0.9375rem; }
+
+  a { color: var(--aksent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  code {
+    font-family: var(--skrift-kode);
+    font-size: 0.875em;
+    background: var(--flate-dempet);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  ul { margin: 0; padding-left: 1.1rem; max-width: 65ch; display: flex; flex-direction: column; gap: 0.5rem; }
+  li::marker { color: var(--blekk-dempet); }
+
+  blockquote {
+    margin: 0;
+    font-family: var(--skrift-ui);
+    font-weight: 500;
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    max-width: 32em;
+  }
+  blockquote cite {
+    display: block;
+    margin-top: 0.85rem;
+    font-family: var(--skrift-kode);
+    font-size: 0.75rem;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--blekk-dempet);
+  }
+
+  /* --- figur --- */
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+  .figurramme {
+    background: var(--flate);
+    border: 1px solid var(--kant);
+    border-radius: 4px;
+    padding: 1.5rem 1.25rem;
+    overflow-x: auto;
+  }
+  .figurramme svg { display: block; width: 100%; min-width: 40rem; max-width: 52rem; height: auto; margin: 0 auto; color: var(--blekk-dempet); }
+  figcaption { font-size: 0.9375rem; color: var(--blekk-dempet); max-width: 65ch; }
+
+  /* Fargene ligger i klasser og ikke i fill-attributter: var() i et
+     presentasjonsattributt feiler stille i eldre WebKit, og da blir fyllet
+     svart og usynlig i mørk modus. */
+  .kart .boks { fill: var(--flate-dempet); stroke: currentColor; stroke-width: 1.2; }
+  .kart .boks-lys { fill: var(--flate); stroke: currentColor; stroke-width: 1.2; }
+  .kart .navn { fill: var(--blekk); font-family: var(--skrift-ui); font-weight: 600; }
+  .kart .detalj { fill: currentColor; font-family: var(--skrift-kode); }
+  .kart .merkelapp { fill: currentColor; font-family: var(--skrift-kode); }
+  .kart .sterk { fill: var(--blekk); }
+  .kart .kant { stroke: currentColor; stroke-width: 1.4; fill: none; }
+  .kart .pilhode { fill: currentColor; }
+
+  .kart .avvist-boks { fill: none; stroke: var(--hoy); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .kart .avvist-tekst { fill: var(--hoy); }
+  .kart .avvist-kant { stroke: var(--hoy); stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+  .kart .pilhode-avvist { fill: var(--hoy); }
+
+  .kart .ny-kant { stroke: var(--aksent); stroke-width: 2.2; fill: none; }
+  .kart .ny-tekst { fill: var(--aksent); }
+  .kart .ny-navn { fill: var(--aksent); font-family: var(--skrift-ui); font-weight: 600; }
+  .kart .pilhode-ny { fill: var(--aksent); }
+
+  /* --- tabell --- */
+
+  .tabellramme { overflow-x: auto; border: 1px solid var(--kant); border-radius: 4px; background: var(--flate); }
+  table { border-collapse: collapse; width: 100%; min-width: 34rem; font-family: var(--skrift-ui); font-size: 0.9375rem; }
+  caption { text-align: left; padding: 0.85rem 1rem; font-family: var(--skrift-kode); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blekk-dempet); border-bottom: 1px solid var(--kant); }
+  th, td { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid var(--kant-svak); vertical-align: top; }
+  thead th { font-weight: 600; font-size: 0.8125rem; color: var(--blekk-dempet); }
+  tbody th { font-weight: 500; max-width: 18rem; }
+  tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+  .ja { color: var(--fikset); font-weight: 600; }
+  .nei { color: var(--hoy); font-weight: 600; }
+  .vilkaar { display: block; font-family: var(--skrift-kode); font-size: 0.6875rem; font-weight: 400; color: var(--blekk-dempet); letter-spacing: 0.02em; margin-top: 0.15rem; }
+
+  /* --- funnregister --- */
+
+  .register { display: flex; flex-direction: column; }
+  .funn { display: flex; flex-direction: column; gap: 0.6rem; padding: 1.4rem 0; border-top: 1px solid var(--kant); }
+  .funn:first-child { border-top: 1px solid var(--blekk-dempet); }
+
+  .funnmeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.9rem;
+    font-family: var(--skrift-kode);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+  }
+  .funnid { font-weight: 500; color: var(--blekk); }
+  .alvor { text-transform: uppercase; }
+  .alvor-hoy { color: var(--hoy); font-weight: 500; }
+  .alvor-middels { color: var(--middels); font-weight: 500; }
+  .alvor-lav { color: var(--blekk-dempet); }
+  .status { margin-left: auto; color: var(--blekk-dempet); }
+  .status-fikset { color: var(--fikset); font-weight: 500; }
+  .sted { color: var(--blekk-dempet); }
+
+  .funn p { font-size: 1rem; }
+
+  /* --- faser --- */
+
+  .faser { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1px; background: var(--kant); border: 1px solid var(--kant); border-radius: 4px; overflow: hidden; }
+  .fase { background: var(--flate); padding: 1.1rem 1.15rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .fasenr { font-family: var(--skrift-kode); font-size: 0.75rem; letter-spacing: 0.06em; color: var(--blekk-dempet); }
+  .fase h3 { font-size: 1rem; }
+  .fase p { font-size: 0.9375rem; color: var(--blekk-dempet); }
+  .fase[data-aktiv="ja"] { background: var(--aksent-svak); }
+  .fase[data-aktiv="ja"] .fasenr { color: var(--aksent); font-weight: 500; }
+
+  /* --- fot --- */
+
+  .fot { border-top: 1px solid var(--kant); padding-top: 1.5rem; font-size: 0.875rem; color: var(--blekk-dempet); display: flex; flex-direction: column; gap: 0.5rem; }
+
+  :where(a, summary, [tabindex]):focus-visible { outline: 2px solid var(--aksent); outline-offset: 2px; border-radius: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<div class="side">
+
+  <header class="topp">
+    <p class="merke">Innbyggerdialog Sandbox · KS Digital</p>
+    <h1>Innbyggerens datakart</h1>
+    <p class="undertittel">Et kart over hvem som har lest opplysningene dine, hva de fikk se, og hvilke rettigheter du faktisk har til dem.</p>
+    <div class="toppstatus">
+      <span>Status <b>Fase 1 av 3, under arbeid</b></span>
+      <span>Sikkerhetsfunn <b>7 registrert, 1 på demo-veien</b></span>
+      <span>Oppdatert <b>10. september 2026</b></span>
+    </div>
+  </header>
+
+  <section>
+    <p class="stikk">Problemet</p>
+    <blockquote>
+      «Det er vanskelig å vite hvilken avdeling, hvilken leverandør, og hvor dataene ligger.»
+      <cite>Utgangspunktet for oppgaven</cite>
+    </blockquote>
+    <p>Sandkassen skriver hver enkelt datatilgang til <code>revisjonslogg</code>. Den loggen finnes, den er komplett, og den er praktisk utilgjengelig for personen den handler om:</p>
+    <ul>
+      <li><code>GET /api/revisjonslogg</code> krever Maskinporten. Ingen innbygger kan lese den.</li>
+      <li><code>GET /api/revisjonslogg/{sporingsId}</code> krever at du alt kjenner en flyt-id, og dekker én flyt.</li>
+      <li>Radene sier ikke hvem som eier opplysningen. Hvilken etat eller leverandør den kom fra, står bare som prosa i en beskrivelse.</li>
+      <li>Grensesnittet lover at samtykke kan trekkes «når som helst». Det finnes ingen rute en innbygger kan bruke til å gjøre det.</li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="stikk">Mekanismen</p>
+    <h2>Loggen finnes allerede. Det som mangler, er veien tilbake.</h2>
+    <figure>
+      <div class="figurramme">
+        <svg class="kart" viewBox="0 0 800 372" role="img" aria-label="Diagram: innbyggeren starter en søknad hos kommunen, som leser inntekt fra Skatteetaten, husstand fra Folkeregisteret og eiendom fra Kartverket, mens et forsøk på å lese legeerklæring avvises fordi samtykke mangler. Hver lesning skrives til revisjonsloggen. Den nye ruten er en pil fra revisjonsloggen tilbake til innbyggeren.">
+          <defs>
+            <marker id="pil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="pilhode" d="M0,0 L10,5 L0,10 z"></path>
+            </marker>
+            <marker id="pil-avvist" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="pilhode-avvist" d="M0,0 L10,5 L0,10 z"></path>
+            </marker>
+            <marker id="pil-ny" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path class="pilhode-ny" d="M0,0 L10,5 L0,10 z"></path>
+            </marker>
+          </defs>
+
+          <!-- innbygger -->
+          <rect class="boks" x="26" y="112" width="126" height="62" rx="4"></rect>
+          <text class="navn" x="89" y="139" text-anchor="middle" font-size="14">Deg</text>
+          <text class="detalj" x="89" y="157" text-anchor="middle" font-size="10.5">innbygger</text>
+
+          <!-- kommunen -->
+          <rect class="boks" x="252" y="98" width="172" height="90" rx="4"></rect>
+          <text class="navn" x="338" y="128" text-anchor="middle" font-size="14">Kommunen</text>
+          <text class="detalj" x="338" y="147" text-anchor="middle" font-size="10.5">barnehagesøknad</text>
+          <text class="detalj" x="338" y="164" text-anchor="middle" font-size="10.5">samtykke · regel</text>
+
+          <!-- kilder -->
+          <rect class="boks-lys" x="546" y="14" width="228" height="46" rx="4"></rect>
+          <text class="navn" x="562" y="34" font-size="12.5">Skatteetaten</text>
+          <text class="detalj" x="562" y="50" font-size="10.5">inntekt</text>
+
+          <rect class="boks-lys" x="546" y="72" width="228" height="46" rx="4"></rect>
+          <text class="navn" x="562" y="92" font-size="12.5">Folkeregisteret</text>
+          <text class="detalj" x="562" y="108" font-size="10.5">husstand</text>
+
+          <rect class="boks-lys" x="546" y="130" width="228" height="46" rx="4"></rect>
+          <text class="navn" x="562" y="150" font-size="12.5">Kartverket</text>
+          <text class="detalj" x="562" y="166" font-size="10.5">eiendom</text>
+
+          <rect class="avvist-boks" x="546" y="188" width="228" height="46" rx="4"></rect>
+          <text class="navn avvist-tekst" x="562" y="208" font-size="12.5">Pasientjournal</text>
+          <text class="detalj avvist-tekst" x="562" y="224" font-size="10.5">legeerklæring</text>
+
+          <!-- revisjonslogg -->
+          <rect class="boks-lys" x="252" y="288" width="172" height="62" rx="4"></rect>
+          <text class="detalj sterk" x="338" y="315" text-anchor="middle" font-size="12">revisjonslogg</text>
+          <text class="detalj" x="338" y="333" text-anchor="middle" font-size="10.5">én rad per lesning</text>
+
+          <!-- kanter, tillatte -->
+          <g class="kant" marker-end="url(#pil)">
+            <path d="M152 143 H246"></path>
+            <path d="M424 124 L540 37"></path>
+            <path d="M424 138 L540 95"></path>
+            <path d="M424 156 L540 153"></path>
+            <path d="M338 188 V282"></path>
+          </g>
+          <text class="merkelapp" x="199" y="134" text-anchor="middle" font-size="10">søker</text>
+          <text class="merkelapp" x="352" y="238" font-size="10">skriver</text>
+
+          <!-- kant, avvist -->
+          <path class="avvist-kant" d="M424 168 L540 209" marker-end="url(#pil-avvist)"></path>
+          <text class="merkelapp avvist-tekst" x="470" y="205" font-size="10">samtykke mangler</text>
+
+          <!-- den nye kanten -->
+          <path class="ny-kant" d="M246 319 H89 V180" marker-end="url(#pil-ny)"></path>
+          <text class="ny-navn" x="168" y="308" text-anchor="middle" font-size="11.5">innsyn</text>
+          <text class="merkelapp ny-tekst" x="168" y="337" text-anchor="middle" font-size="10">ruten vi legger til</text>
+        </svg>
+      </div>
+      <figcaption>Alt bortsett fra den blå pilen finnes i sandkassen i dag. Kommunen leser fra tre registre, får avslag på det fjerde fordi samtykke mangler, og hver lesning blir en rad i revisjonsloggen. Det som ikke finnes, er en vei fra loggen tilbake til personen den handler om.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <p class="stikk">Rettighetene</p>
+    <h2>«Kan jeg få dem?» og «kan jeg slette dem?» har ulike svar, og de er ikke de svarene folk venter.</h2>
+    <p>Innsyn, kopi, portabilitet og sletting er fire forskjellige rettigheter med fire forskjellige vilkår. For en kommune faller de fra hverandre: nesten alt kan du få kopi av, nesten ingenting kan du ta med deg videre, og lite kan slettes.</p>
+    <div class="tabellramme">
+      <table>
+        <caption>Hva du kan kreve, per type opplysning</caption>
+        <thead>
+          <tr>
+            <th scope="col">Opplysningen</th>
+            <th scope="col">Innsyn</th>
+            <th scope="col">Kopi</th>
+            <th scope="col">Portabilitet</th>
+            <th scope="col">Sletting</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Gitt av deg, med samtykke</th>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="ja">Ja</span><span class="vilkaar">art. 20</span></td>
+            <td><span class="ja">Ja</span><span class="vilkaar">trekk samtykket, art. 7(3)</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Utledet av kommunen, som en beregning eller et vilkårsutfall</th>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="nei">Nei</span><span class="vilkaar">ikke «gitt av deg»</span></td>
+            <td><span class="ja">Ja</span><span class="vilkaar">følger samtykket</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Hentet med hjemmel, som folkeregister og matrikkel</th>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="ja">Ja</span><span class="vilkaar">art. 15(3)</span></td>
+            <td><span class="nei">Nei</span><span class="vilkaar">art. 20(3), offentlig myndighet</span></td>
+            <td><span class="nei">Nei</span><span class="vilkaar">art. 17(3)(b), arkivlova</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Revisjonsloggen selv</th>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="ja">Ja</span></td>
+            <td><span class="nei">Nei</span></td>
+            <td><span class="nei">Nei</span><span class="vilkaar">med vilje, art. 5(2)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="liten dempet">Den siste raden er poenget. Å slette sporet av hvem som har sett på deg, ville fjernet nettopp det som beskytter deg. Derfor kan loggen leses og kopieres, men aldri tømmes, og tjenesten sier det rett ut framfor å tilby en knapp som ser ut som en rettighet.</p>
+  </section>
+
+  <section>
+    <p class="stikk">Løsningen</p>
+    <h2>Et kart, en begrunnelse per rad, og en eksport du kan ta med deg</h2>
+    <ul>
+      <li><b>Kartet</b> tegnes fra revisjonsloggen krysset med ressurskatalogen: hvem leste, hva de leste, fra hvilken kilde, og med hvilken hjemmel. Avviste forsøk vises også, fordi et avslag er samtykkeporten som virker.</li>
+      <li><b>Begrunnelsen</b> per rad kommer fra en regelmodul utenfor språkmodellen. Den avgjør de fire rettighetene over deterministisk, og er festet med en egen test per rute i tabellen.</li>
+      <li><b>Eksporten</b> er én pakke med alt, der hver post er merket med sin egen portabilitetsstatus. Ikke to eksporter. Merkingen er det som lærer deg noe.</li>
+      <li><b>Tilbaketrekking</b> får den ruten grensesnittet alt lover. Trekker du samtykket, forsvinner opplysningen fra flyten, og oppsummeringssteget nekter framfor å bygge et vedtak på et grunnlag som er borte.</li>
+    </ul>
+
+    <h3>Hvordan KI brukes, og hvor grensen går</h3>
+    <p>Språkmodellen formulerer. Den regner ikke, og den avgjør ingenting. Rettighetsvurderingen er ferdig beregnet før prompten bygges, og sendes inn som et faktum modellen skal skrive om, ikke som et spørsmål den skal svare på.</p>
+    <p>Modellen kjører på <b>Telenor AI Factory</b>, altså norsk infrastruktur. Det er ikke pynt: en tjeneste som skal fortelle deg hvor opplysningene dine ligger, kan ikke selv sende dem ut av landet for å få hjelp med formuleringen. Prompten minimeres i tillegg med en egen tillatelsesliste, fordi den sentrale sperren i sandkassen filtrerer på feltnavn og ikke fanger et fødselsnummer som ligger under nøkkelen <code>id</code>.</p>
+  </section>
+
+  <section>
+    <p class="stikk">Sikkerhetsfunn</p>
+    <h2>Sju funn i referanseimplementasjonen</h2>
+    <p>Alle er verifisert i koden. Alvorsgraden er vurdert som om mønsteret sto i en ekte kommunal tjeneste. Sandkassen har bare syntetiske data, så ingenting av dette er en hendelse. Det er nettopp derfor det betyr noe: dette repoet er referansen andre team kopierer, og fire av funnene ligger under et avsnitt i <code>AGENTS.md</code> som beskriver riktig oppførsel. Det som manglet, var en sjekk under avsnittet.</p>
+    <p class="liten dempet">Bare F4 ligger på demo-veien, fordi innsynsruten ikke kan skrives uten å avgjøre hva som skjer med en annen persons fødselsnummer. De øvrige er registrert med rettelse og test beskrevet, og bevisst lagt til side: de blokkerer ikke demoen, og F1 endrer i tillegg oppførselen til en eksisterende side, så den bærer sin egen risiko rett før en presentasjon.</p>
+
+    <div class="register">
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F1</span>
+          <span class="alvor alvor-hoy">Høy</span>
+          <span class="sted">routes.ts:752 · autentisering.ts:262</span>
+          <span class="status">Notert · ikke prioritert</span>
+        </div>
+        <h3>Manglende tilgangskontroll på revisjonsloggen</h3>
+        <p>Finner ikke ruten et subjekt for en flyt-id, blir <code>pid</code> null, og eierskapssjekken hoppes over i sin helhet. Alle KI-rader og hver flyt som ble opprettet av et rent datakall, kan dermed leses av hvilken som helst innlogget innbygger, om hvilken som helst person. Radene bærer fødselsnummer, husstandssammensetning og hva som ble lest om hvem. Ruten har ingen test i dag, og kommentaren over den beskriver oppførselen som en funksjon, så ingen som leser diffen ville stoppet den.</p>
+        <p class="dempet liten">Hvorfor det haster: dette er konfidensialitetsgrensen hele sandkassen finnes for å demonstrere, og den er brutt i den ene flaten som skal bevise at datatilgang er kontrollert.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F2</span>
+          <span class="alvor alvor-middels">Middels</span>
+          <span class="sted">state.ts:127</span>
+          <span class="status">Notert · ikke prioritert</span>
+        </div>
+        <h3>Svak id-generering der id-en er en nøkkel</h3>
+        <p><code>newId</code> bygger på <code>Date.now()</code> og <code>Math.random()</code>. Det siste er ingen kryptografisk generator, og tilstanden kan gjenskapes fra noen få observerte verdier. Alene er det harmløst, siden økt- og søknads-id-er beskyttes av eierskapssjekken og ikke av hemmelighold. Sammen med F1 er det ikke harmløst: der er flyt-id-en det eneste som skiller en kaller fra en annen persons revisjonsrader.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: å fikse F1 er den ekte løsningen, for den fjerner nøkkelegenskapen framfor å gjøre gjetting vanskelig. Men mønsteret er verdt å merke seg, for neste funksjon som behandler en id som en hemmelighet, arver en generator som ikke bærer den vekten.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F3</span>
+          <span class="alvor alvor-hoy">Høy</span>
+          <span class="sted">autentisering.ts:137</span>
+          <span class="status">Notert · ikke prioritert</span>
+        </div>
+        <h3>Revisjonsloggen glemmer hvem opplysningen gjaldt</h3>
+        <p><code>aktorFor</code> registrerer hvem som spurte, og forkaster hvem det gjaldt. Begrunnelsen i koden er at en innbygger er sitt eget subjekt, og det sluttet å være sant da eierskapssjekken ble utvidet til å slippe inn registrerte representanter. En foresatt som driver en mindreårigs søknad om TT-kort, gir en rad der den mindreårige ikke står noe sted. Opplysningen som ble lest, er en legeerklæring.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: en logg som ikke sier hvem opplysningen gjaldt, kan ikke svare på «hvem har lest barnet mitt sin journal», som er spørsmålet den finnes for. Det bryter også stille den funksjonen vi bygger, siden den mindreåriges eget innsyn da ikke viser den lesningen som betyr mest.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F4</span>
+          <span class="alvor alvor-middels">Middels</span>
+          <span class="sted">chat.ts:373</span>
+          <span class="status status-fikset">Under arbeid · del av innsynsruten</span>
+        </div>
+        <h3>Andres fødselsnummer vises gjennom innsynsflaten</h3>
+        <p><code>aktor.id</code> er fødselsnummeret til den som handlet, og på en rad om deg er det ikke alltid ditt. En foresatt kan ha drevet flyten, og et inntektsoppslag utføres av én foresatt mens det berører den andre. Det gjelder 68 av 200 husstander. I dag skrives tallet rett ut i grensesnittet, så én forelder ser den andres fødselsnummer uten hjemmel til det.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: det er et fødselsnummer utlevert til noen uten rettslig grunnlag, fra den flaten som finnes for å beskytte personopplysninger. Det gjelder i dag, uavhengig av det vi bygger.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F5</span>
+          <span class="alvor alvor-middels">Middels</span>
+          <span class="sted">revisjon.ts:13</span>
+          <span class="status">Notert · ikke prioritert</span>
+        </div>
+        <h3>Revisjonsrader kan forfalskes eller tilbakedateres av den som skriver dem</h3>
+        <p>Kallerens objekt legges inn <em>sist</em>, så et kall til <code>POST /api/revisjonslogg</code> kan overstyre <code>hendelseId</code>, <code>tidspunkt</code> og <code>syntetisk</code>. Ruten krever et maskinscope, så en innbygger kommer ikke til. Eksponeringen er en tjeneste som er kompromittert eller oppfører seg feil, og som da kan tilbakedatere, duplisere eller dikte opp rader.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: en revisjonslogg er bevis, og bevis der den reviderte selv setter tidsstempelet, er ikke bevis. Rettelsen er å bytte rekkefølgen på én linje.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F6</span>
+          <span class="alvor alvor-lav">Lav</span>
+          <span class="sted">routes.ts:568</span>
+          <span class="status">Åpen · brukt som føring</span>
+        </div>
+        <h3>Flyt-id-en kommer fra klienten og valideres ikke</h3>
+        <p>Enhver kaller kan henge revisjonsrader på en annen persons flyt-id.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: det er grunnen til at den nye innsynsruten <em>ikke</em> kan samle rader på flyt-id. Gjorde den det, kunne en angriper sprøyte rader inn i offerets innsynsbilde, og flaten som skal opplyse, ville villedet i stedet. Ikke rettet her, men den avgjør hvordan ruten er bygget.</p>
+      </article>
+
+      <article class="funn">
+        <div class="funnmeta">
+          <span class="funnid">F7</span>
+          <span class="alvor alvor-lav">Lav</span>
+          <span class="sted">hva-logges.md:124</span>
+          <span class="status">Åpen · brukt som føring</span>
+        </div>
+        <h3>Ingen oppbevaringstid eller rotasjon på revisjonsloggen</h3>
+        <p>Hele filen skrives om ved hver hendelse, inne i den delte skrivekøen, så kostnaden vokser med loggen.</p>
+        <p class="dempet liten">Hvorfor det bør adresseres: det er en ytelsesvegg under last, og et spørsmål om lagringsbegrensning for en logg som med vilje registrerer personopplysninger uten sluttdato. Det er også grunnen til at innsyn i din egen logg ikke skriver en rad: en side som logget hver visning av seg selv, ville vokst filen for hver oppdatering.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <p class="stikk">Veien videre</p>
+    <h2>Fire faser, og hver av dem stopper pent</h2>
+    <div class="faser">
+      <div class="fase" data-aktiv="ja">
+        <span class="fasenr">Fase 1 · under arbeid</span>
+        <h3>Kartet</h3>
+        <p>Innsynsruten, kilde og oppbevaring i katalogen, rettighetsmodulen og siden. Svarer alene på «hvem har opplysningene mine».</p>
+      </div>
+      <div class="fase">
+        <span class="fasenr">Fase 2 · ikke startet</span>
+        <h3>Eksporten</h3>
+        <p>Kopi etter artikkel 15(3), med portabilitet merket per post.</p>
+      </div>
+      <div class="fase">
+        <span class="fasenr">Fase 3 · ikke startet</span>
+        <h3>Tilbaketrekking</h3>
+        <p>Ruten innbyggeren mangler, og porten som lukker seg mens du ser på.</p>
+      </div>
+      <div class="fase">
+        <span class="fasenr">Etterslep · notert</span>
+        <h3>Funnene som ikke stopper demoen</h3>
+        <p>F1, F2, F3, F5 og ekte sletting. Registrert med rettelse og test beskrevet, men bevisst ikke prioritert foran demoen.</p>
+      </div>
+    </div>
+    <p class="liten dempet">Arbeidet er delt i seksten saker, ti på demo-veien og seks på etterslepet. Hver sak er skrevet så den kan tas av én utvikler eller én agent alene, og de fleste av de første kan gå parallelt.</p>
+  </section>
+
+  <section>
+    <p class="stikk">Grenser</p>
+    <h2>Hva vi ikke har gjort, og hvorfor</h2>
+    <ul>
+      <li><b>Å trekke et samtykke er ikke det samme som å slette.</b> Fram til fase 4 gjør tilbaketrekking opplysningen utilgjengelig, men den rå verdien ligger fortsatt lagret på disk. Panelet sier «gjort utilgjengelig, ikke slettet» og peker på hvor den ligger. En personverntjeneste som melder «slettet» mens bytene er der, er verre enn en som ikke melder noe.</li>
+      <li><b>Eksporten forlater den kontrollerte flaten.</b> Revisjonssporet kan ikke følge en fil ut av huset. Å signere pakken, slik at den blir mulig å etterprøve, er det naturlige neste laget og er ute av omfang her.</li>
+      <li><b>Noen rader mangler subjekt.</b> KI-kall, beregning og forsendelse skriver ingen person, så de kommer ikke med i kartet. Å lukke det hører hjemme hos de som skriver radene, ikke i et filter hos leseren. Spesifikasjonen sier det rett ut i mellomtiden.</li>
+      <li><b>Antallet andre i en husstand er ingen anonymisering.</b> I en husstand med to voksne kan du selvsagt slutte deg til hvem den andre er. Vi holder tilbake identifikatoren, ikke slutningen, og sier det framfor å late som noe annet.</li>
+    </ul>
+  </section>
+
+  <footer class="fot">
+    <p>Alle data i sandkassen er syntetiske. Kartet kjører lokalt på <code>localhost:3001/innsyn</code> når stacken er startet.</p>
+    <p>Denne siden oppdateres for hver fase som landes, og funnregisteret over er statusen slik den faktisk er.</p>
+  </footer>
+
+</div>
